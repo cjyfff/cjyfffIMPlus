@@ -2,6 +2,9 @@
 #coding=utf-8
 
 import pika
+import json
+
+EXCHANGE_NAME = 'CJYFFFIM'
 
 #连接rabbitmq服务器
 connection = pika.BlockingConnection(pika.ConnectionParameters(
@@ -9,22 +12,23 @@ connection = pika.BlockingConnection(pika.ConnectionParameters(
 channel = connection.channel()
 
 #定义队列
-channel.exchange_declare(exchange='test', type='direct')
+channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
 channel.queue_declare(queue='server_q')
-channel.queue_bind(exchange='test', queue='server_q', routing_key='server')
+channel.queue_bind(exchange=EXCHANGE_NAME, queue='server_q', routing_key='server')
 print ' [*] Waiting for client'
 
-#定义接收到消息的处理方法
+
 def request(ch, method, properties, body):
+    online_msg = json.loads(body)
+
     response_msg = '''{
         'type': 'online_resp',
     }'''
     print "server24", properties.reply_to
     #将计算结果发送回控制中心
-    ch.exchange_declare(exchange='test',  
-                         type='direct')
-    ch.basic_publish(exchange='test',
-                     routing_key='jackson',
+    ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
+    ch.basic_publish(exchange=EXCHANGE_NAME,
+                     routing_key=online_msg['user_id'],
                      body=response_msg)
     ch.basic_ack(delivery_tag = method.delivery_tag)
     print "server26"
