@@ -32,11 +32,11 @@ def handle_online_msg(msg, ch, method):
                      routing_key=msg['user_id'],
                      body=json.dumps(response_msg))
     ch.basic_ack(delivery_tag = method.delivery_tag)
-    print "server51"
+    print "server35"
 
 
-def handle_offline_msg():
-    pass
+def handle_offline_msg(msg):
+    print "server39", msg
 
 
 def handle_normal_msg(msg, ch, method):
@@ -46,7 +46,6 @@ def handle_normal_msg(msg, ch, method):
         'id': 1,
         'user_name': 'kate',
         'user_id': msg['user_id'],
-        'user_ip': '192.168.1.101',
     }]
 
     d_client = {}
@@ -82,7 +81,7 @@ def request(ch, method, properties, body):
         handle_online_msg(msg, ch, method)
 
     elif msg['type'] == 'offline_notice':
-        handle_offline_msg()
+        handle_offline_msg(msg)
 
     elif msg['type'] == 'normal':
         handle_normal_msg(msg, ch, method)

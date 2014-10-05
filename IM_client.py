@@ -6,22 +6,22 @@ import os
 import time
 import json
 import threading
+import copy
 from uuid import uuid4
 
 EXCHANGE_NAME = 'CJYFFFIM'
-close_connection = False
 
 
 class SendOnlineMsg(object):
 
     def __init__(self, connection, msg):
         self.connection = connection
-        self.msg = msg
+        self.msg = copy.deepcopy(msg)
         self.user_id = self.msg['user_id']
         self.channel = self.connection.channel()
         self.client_list = None
 
-        #定义接收返回消息的队列
+        #定义接收上线反馈消息的队列
         self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
         self.channel.queue_declare(queue='user_q')
         self.channel.queue_bind(exchange=EXCHANGE_NAME, queue='user_q', routing_key=self.user_id)
@@ -29,12 +29,12 @@ class SendOnlineMsg(object):
                                    no_ack=True,
                                    queue='user_q')
 
-    #定义接收到返回消息的处理方法
+    #定义接收到上线反馈消息的处理方法
     def on_response(self, ch, method, props, body):
         self.client_list = body
+        print "client35", self.client_list
 
     def run(self):
-        #发送广播信息
         online_msg = self.msg
         online_msg.update({'created_at': int(time.time())})
         online_msg = json.dumps(online_msg)
@@ -53,18 +53,34 @@ class SendOnlineMsg(object):
 
 class SendNormalMsg(object):
 
-    def __init__(self, msg):
+    def __init__(self, msg, quit_msg):
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
-        self.msg = msg
+        self.msg = copy.deepcopy(msg)
+        self.quit_msg = copy.deepcopy(quit_msg)
         self.user_id = self.msg['user_id']
         self.channel = self.connection.channel()
 
+    def send_quit_msg(self):
+        # send to server
+        self.quit_msg.update({'created_at': int(time.time())})
+        self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
+        self.channel.basic_publish(exchange=EXCHANGE_NAME,
+                                   routing_key='server',
+                                   body=json.dumps(self.quit_msg))
+
+        # send to itself
+        self.quit_msg.update({'type': 'self_offline'})
+        self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
+        self.channel.basic_publish(exchange=EXCHANGE_NAME,
+                                   routing_key=self.user_id,
+                                   body=json.dumps(self.quit_msg))
+        print "client77, send all quit msg"
+
     def run(self):
-        global close_connection
         while 1:
             msg = raw_input("> ")
             if msg in ['quit', 'exit']:
-                close_connection = True
+                self.send_quit_msg()
                 break
             normal_msg = self.msg
             normal_msg.update({
@@ -81,8 +97,8 @@ class SendNormalMsg(object):
 
 class ReciveMsg(object):
 
-    def __init__(self, msg):
-        self.connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+    def __init__(self, msg, connection):
+        self.connection = connection
         self.msg = msg
         self.user_id = self.msg['user_id']
         self.channel = self.connection.channel()
@@ -96,7 +112,6 @@ class ReciveMsg(object):
         print body
 
     def run(self):
-        global close_connection
         self.channel.basic_qos(prefetch_count=1)
         for method_frame, properties, body in self.channel.consume('user_q'):
             self.on_response(body)
@@ -104,7 +119,7 @@ class ReciveMsg(object):
 
             # Escape out of the loop after 10 messages
             print "in receive"
-            if close_connection:
+            if 0:
                 break
         print "receive quit"
 
@@ -122,7 +137,6 @@ class MyThread(threading.Thread):
         apply(self.func, self.args)
 
 
-connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
 username = os.environ['USER']
 user_id = uuid4().hex
 online_msg = {
@@ -143,8 +157,23 @@ normal_msg = {
     'message': '',
 }
 
-send_normal_msg = SendNormalMsg(normal_msg)
-recive_msg = ReciveMsg(normal_msg)
+quit_msg = {
+    'type': 'offline',
+    'from': username,
+    'user_id': user_id,
+    'created_at': '',
+    'message': '',
+}
+
+
+# 发送上线消息
+connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+send_online_msg = SendOnlineMsg(connection, online_msg)
+send_online_msg.run()
+
+
+send_normal_msg = SendNormalMsg(normal_msg, quit_msg)
+recive_msg = ReciveMsg(normal_msg, connection)
 threads = []
 t1 = MyThread(send_normal_msg.run, (), )
 threads.append(t1)
