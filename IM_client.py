@@ -21,14 +21,6 @@ class SendOnlineMsg(object):
         self.channel = self.connection.channel()
         self.client_list = None
 
-        #定义接收上线反馈消息的队列
-        self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
-        self.channel.queue_declare(queue='user_q')
-        self.channel.queue_bind(exchange=EXCHANGE_NAME, queue='user_q', routing_key=self.user_id)
-        self.channel.basic_consume(self.on_response,
-                                   no_ack=True,
-                                   queue='user_q')
-
     #定义接收到上线反馈消息的处理方法
     def on_response(self, ch, method, props, body):
         self.client_list = body
@@ -41,14 +33,7 @@ class SendOnlineMsg(object):
         self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
         self.channel.basic_publish(exchange=EXCHANGE_NAME,
                                    routing_key='server',
-                                   properties=pika.BasicProperties(
-                                         reply_to=self.user_id,
-                                         ),
                                    body=online_msg)
-        #接收返回的数据
-        while self.client_list is None:
-            self.connection.process_data_events()
-        return self.client_list
 
 
 class SendNormalMsg(object):
@@ -74,6 +59,7 @@ class SendNormalMsg(object):
         self.channel.basic_publish(exchange=EXCHANGE_NAME,
                                    routing_key=self.user_id,
                                    body=json.dumps(self.quit_msg))
+        self.connection.close()
         print "client77, send all quit msg"
 
     def run(self):
@@ -81,6 +67,7 @@ class SendNormalMsg(object):
             msg = raw_input("> ")
             if msg in ['quit', 'exit']:
                 self.send_quit_msg()
+                time.sleep(3)
                 break
             normal_msg = self.msg
             normal_msg.update({
@@ -92,6 +79,7 @@ class SendNormalMsg(object):
             self.channel.basic_publish(exchange=EXCHANGE_NAME,
                                    routing_key='server',
                                    body=normal_msg)
+            print "client82 sent msg successfully"
         print "send quit"
 
 
@@ -109,18 +97,19 @@ class ReciveMsg(object):
                                 routing_key=self.user_id)
 
     def on_response(self, body):
-        print body
+        print "client100", body
 
     def run(self):
         self.channel.basic_qos(prefetch_count=1)
         for method_frame, properties, body in self.channel.consume('user_q'):
+            body = json.loads(body)
             self.on_response(body)
             self.channel.basic_ack(method_frame.delivery_tag)
 
             # Escape out of the loop after 10 messages
-            print "in receive"
-            if 0:
+            if body['type'] == 'self_offline':
                 break
+        self.connection.close()
         print "receive quit"
 
 
@@ -184,4 +173,3 @@ for t in threads:
     t.setDaemon(True)
     t.start()
 t1.join()
-connection.close()

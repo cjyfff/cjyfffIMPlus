@@ -35,7 +35,8 @@ def handle_online_msg(msg, ch, method):
     print "server35"
 
 
-def handle_offline_msg(msg):
+def handle_offline_msg(msg, ch, method):
+    ch.basic_ack(delivery_tag = method.delivery_tag)
     print "server39", msg
 
 
@@ -78,10 +79,11 @@ def request(ch, method, properties, body):
     msg = json.loads(body)
 
     if msg['type'] == 'online':
+        print "server81 recv online msg"
         handle_online_msg(msg, ch, method)
 
-    elif msg['type'] == 'offline_notice':
-        handle_offline_msg(msg)
+    elif msg['type'] == 'offline':
+        handle_offline_msg(msg, ch, method)
 
     elif msg['type'] == 'normal':
         handle_normal_msg(msg, ch, method)
