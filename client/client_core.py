@@ -21,7 +21,6 @@ class SendOnlineMsg(object):
         self.channel = self.connection.channel()
         self.client_list = None
 
-    #定义接收到上线反馈消息的处理方法
     def on_response(self, ch, method, props, body):
         self.client_list = body
         print "client35", self.client_list
@@ -46,14 +45,14 @@ class SendNormalMsg(object):
         self.channel = self.connection.channel()
 
     def send_quit_msg(self):
-        # send to server
+        # send quit msg to server
         self.quit_msg.update({'created_at': int(time.time())})
         self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
         self.channel.basic_publish(exchange=EXCHANGE_NAME,
                                    routing_key='server',
                                    body=json.dumps(self.quit_msg))
 
-        # send to itself
+        # send quit msg to client itself
         self.quit_msg.update({'type': 'self_offline'})
         self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
         self.channel.basic_publish(exchange=EXCHANGE_NAME,
@@ -106,7 +105,6 @@ class ReciveMsg(object):
             self.on_response(body)
             self.channel.basic_ack(method_frame.delivery_tag)
 
-            # Escape out of the loop after 10 messages
             if body['type'] == 'self_offline':
                 break
         self.connection.close()
@@ -155,7 +153,6 @@ quit_msg = {
 }
 
 
-# 发送上线消息
 connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
 send_online_msg = SendOnlineMsg(connection, online_msg)
 send_online_msg.run()

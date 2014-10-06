@@ -109,19 +109,22 @@ def request(ch, method, properties, body):
         handle_normal_msg(msg, ch, method)
 
 
-#连接rabbitmq服务器
-connection = pika.BlockingConnection(pika.ConnectionParameters(
-        host='localhost'))
-channel = connection.channel()
+def main():
+    try:
+        connection = pika.BlockingConnection(pika.ConnectionParameters(
+                host='localhost'))
+        channel = connection.channel()
+        channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
+        channel.queue_declare(queue='server_q')
+        channel.queue_bind(exchange=EXCHANGE_NAME, queue='server_q', routing_key='server')
+        print " [*] Waiting for client"
 
-#定义队列
-channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
-channel.queue_declare(queue='server_q')
-channel.queue_bind(exchange=EXCHANGE_NAME, queue='server_q', routing_key='server')
-print ' [*] Waiting for client'
+        channel.basic_qos(prefetch_count=1)
+        channel.basic_consume(request, queue='server_q')
+        channel.start_consuming()
+    except (KeyboardInterrupt, SystemError):
+        connection.close()
+        print " [*] Server exit..."
 
-
-channel.basic_qos(prefetch_count=1)
-channel.basic_consume(request, queue='server_q')
-
-channel.start_consuming()
+if __name__ == '__main__':
+    main()
