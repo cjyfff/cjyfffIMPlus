@@ -6,10 +6,11 @@ import json
 import time
 
 EXCHANGE_NAME = 'CJYFFFIM'
+client_list = []
 
 
 def handle_online_msg(msg, ch, method):
-    client_list = []
+    global client_list
     user_id_list = []
     for i in client_list:
         user_id_list.append(i['user_id'])
@@ -22,22 +23,41 @@ def handle_online_msg(msg, ch, method):
         })
 
     response_msg = {
-        'type': 'online_resp',
+        'type': 'client_list',
         'created_at': int(time.time()),
-        'message': client_list,
+        'message': [{'id': client['id'], 'user_name': client['user_name']} for client in client_list],
     }
-    #将计算结果发送回控制中心
+
     ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
     ch.basic_publish(exchange=EXCHANGE_NAME,
                      routing_key=msg['user_id'],
                      body=json.dumps(response_msg))
     ch.basic_ack(delivery_tag = method.delivery_tag)
-    print "server35"
+    print "server35 end handle_online_msg"
 
 
 def handle_offline_msg(msg, ch, method):
+    global client_list
+    for i in xrange(len(client_list)):
+        if client_list[i]['user_id'] == msg['user_id']:
+            del client_list[i]
+    print "server44", client_list
     ch.basic_ack(delivery_tag = method.delivery_tag)
-    print "server39", msg
+
+    if not client_list:
+        return 0
+
+    response_msg = {
+        'type': 'client_list',
+        'created_at': int(time.time()),
+        'message': [{'id': client['id'], 'user_name': client['user_name']} for client in client_list],
+        }
+    ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
+    for client in client_list:
+        ch.basic_publish(exchange=EXCHANGE_NAME,
+                         routing_key=msg['user_id'],
+                         body=json.dumps(response_msg))
+    print "server60 end handle_offline_msg"
 
 
 def handle_normal_msg(msg, ch, method):
