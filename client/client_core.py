@@ -19,11 +19,6 @@ class SendOnlineMsg(object):
         self.msg = copy.deepcopy(msg)
         self.user_id = self.msg['user_id']
         self.channel = self.connection.channel()
-        self.client_list = None
-
-    def on_response(self, ch, method, props, body):
-        self.client_list = body
-        print "client35", self.client_list
 
     def run(self):
         online_msg = self.msg
@@ -43,6 +38,7 @@ class SendNormalMsg(object):
         self.quit_msg = copy.deepcopy(quit_msg)
         self.user_id = self.msg['user_id']
         self.channel = self.connection.channel()
+        self.did = 0
 
     def send_quit_msg(self):
         # send quit msg to server
@@ -61,17 +57,32 @@ class SendNormalMsg(object):
         self.connection.close()
         print "client77, send all quit msg"
 
+    def print_client_list(self):
+        pass
+
     def run(self):
         while 1:
+            self.print_client_list()
             msg = raw_input("> ")
             if msg in ['quit', 'exit']:
                 self.send_quit_msg()
                 time.sleep(3)
                 break
+            try:
+                did = int(msg.split(' ')[0])
+                msg_content = msg.split(' ')[1]
+                self.did = did
+            except (ValueError, IndexError):
+                did = self.did
+                msg_content = msg
+            if not did:
+                HandleError.invalid_did()
+                continue
             normal_msg = self.msg
             normal_msg.update({
+                'destination_id': did,
                 'created_at': int(time.time()),
-                'message': msg,
+                'message': msg_content,
             })
             normal_msg = json.dumps(normal_msg)
             self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
@@ -95,8 +106,17 @@ class ReciveMsg(object):
                                 queue='user_q',
                                 routing_key=self.user_id)
 
+    def save_client_list(self):
+        pass
+
     def on_response(self, body):
-        print "client100", body
+        #print "client100", body
+        if body['type'] == 'client_list':
+            self.save_client_list()
+        elif body['type'] == 'self_offline':
+            pass
+        else:
+            print "from %s: %s" % (body['from'], body['message'])
 
     def run(self):
         self.channel.basic_qos(prefetch_count=1)
@@ -104,7 +124,6 @@ class ReciveMsg(object):
             body = json.loads(body)
             self.on_response(body)
             self.channel.basic_ack(method_frame.delivery_tag)
-
             if body['type'] == 'self_offline':
                 break
         self.connection.close()
@@ -122,6 +141,13 @@ class MyThread(threading.Thread):
 
     def run(self):
         apply(self.func, self.args)
+
+
+class HandleError(object):
+
+    @classmethod
+    def invalid_did(self):
+        print "Please enter the id of the user you want to talk!"
 
 
 username = os.environ['USER']
