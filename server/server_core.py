@@ -4,8 +4,9 @@
 import pika
 import json
 import time
+import settings
 
-EXCHANGE_NAME = 'CJYFFFIM'
+EXCHANGE_NAME = settings.exchange_name
 client_list = []
 
 

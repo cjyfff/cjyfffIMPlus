@@ -7,9 +7,11 @@ import time
 import json
 import threading
 import copy
+import settings
 from uuid import uuid4
 
-EXCHANGE_NAME = 'CJYFFFIM'
+EXCHANGE_NAME = settings.exchange_name
+MQServer = settings.mq_server
 
 client_list = {}
 
@@ -63,7 +65,7 @@ class SendOnlineMsg(object):
 class SendNormalMsg(object):
 
     def __init__(self, msg, quit_msg):
-        self.connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+        self.connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQServer))
         self.msg = copy.deepcopy(msg)
         self.quit_msg = copy.deepcopy(quit_msg)
         self.user_id = self.msg['user_id']
@@ -191,7 +193,7 @@ class HandleError(object):
         print "Please enter the id of the user you want to talk!"
 
 
-connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQServer))
 
 send_normal_msg = SendNormalMsg(normal_msg, quit_msg)
 recive_msg = ReceiveMsg(normal_msg, connection, online_msg)
