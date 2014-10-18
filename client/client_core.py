@@ -11,6 +11,36 @@ from uuid import uuid4
 
 EXCHANGE_NAME = 'CJYFFFIM'
 
+client_list = {}
+
+username = os.environ['USER']
+user_id = uuid4().hex
+online_msg = {
+    'type': 'online',
+    'from': username,
+    'user_id': user_id,
+    'created_at': 0,
+    'message': '',
+}
+
+normal_msg = {
+    'type': 'normal',
+    'from': username,
+    'user_id': user_id,
+    'destination': 'myself',
+    'destination_id': 1,
+    'created_at': '',
+    'message': '',
+}
+
+quit_msg = {
+    'type': 'offline',
+    'from': username,
+    'user_id': user_id,
+    'created_at': '',
+    'message': '',
+}
+
 
 class SendOnlineMsg(object):
 
@@ -58,16 +88,22 @@ class SendNormalMsg(object):
         print "client77, send all quit msg"
 
     def print_client_list(self):
-        pass
+        global client_list
+        # TODO: exculde client itself
+        for item in client_list:
+            print "id: %s    name: %s" % (item['id'], item['user_name'])
 
     def run(self):
         while 1:
-            self.print_client_list()
             msg = raw_input("> ")
             if msg in ['quit', 'exit']:
                 self.send_quit_msg()
-                time.sleep(3)
+                time.sleep(1)
                 break
+            if msg in ['client_list', 'cl']:
+                self.print_client_list()
+                continue
+
             try:
                 did = int(msg.split(' ')[0])
                 msg_content = msg.split(' ')[1]
@@ -89,13 +125,11 @@ class SendNormalMsg(object):
             self.channel.basic_publish(exchange=EXCHANGE_NAME,
                                    routing_key='server',
                                    body=normal_msg)
-            print "client82 sent msg successfully"
-        print "send quit"
 
 
-class ReciveMsg(object):
+class ReceiveMsg(object):
 
-    def __init__(self, msg, connection):
+    def __init__(self, msg, connection, online_msg):
         self.connection = connection
         self.msg = msg
         self.user_id = self.msg['user_id']
@@ -105,14 +139,21 @@ class ReciveMsg(object):
         self.channel.queue_bind(exchange=EXCHANGE_NAME,
                                 queue='user_q',
                                 routing_key=self.user_id)
+        # In order to handeling online respone from server while
+        # sending online msg, the function of sending online msg must be run
+        # as the same time as runing receiving msg function.
+        send_online_msg = SendOnlineMsg(connection, online_msg)
+        send_online_msg.run()
 
-    def save_client_list(self):
-        pass
+    def save_client_list(self, body):
+        global client_list
+        # TODO: exculde client itself
+        client_list = body['message']
 
     def on_response(self, body):
-        #print "client100", body
+        print "client100", body
         if body['type'] == 'client_list':
-            self.save_client_list()
+            self.save_client_list(body)
         elif body['type'] == 'self_offline':
             pass
         else:
@@ -150,42 +191,11 @@ class HandleError(object):
         print "Please enter the id of the user you want to talk!"
 
 
-username = os.environ['USER']
-user_id = uuid4().hex
-online_msg = {
-    'type': 'online',
-    'from': username,
-    'user_id': user_id,
-    'created_at': 0,
-    'message': '',
-}
-
-normal_msg = {
-    'type': 'normal',
-    'from': username,
-    'user_id': user_id,
-    'destination': 'myself',
-    'destination_id': 1,
-    'created_at': '',
-    'message': '',
-}
-
-quit_msg = {
-    'type': 'offline',
-    'from': username,
-    'user_id': user_id,
-    'created_at': '',
-    'message': '',
-}
-
-
 connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
-send_online_msg = SendOnlineMsg(connection, online_msg)
-send_online_msg.run()
-
 
 send_normal_msg = SendNormalMsg(normal_msg, quit_msg)
-recive_msg = ReciveMsg(normal_msg, connection)
+recive_msg = ReceiveMsg(normal_msg, connection, online_msg)
+
 threads = []
 t1 = MyThread(send_normal_msg.run, (), )
 threads.append(t1)
@@ -193,6 +203,7 @@ t2 = MyThread(recive_msg.run, (), )
 threads.append(t2)
 
 for t in threads:
-    t.setDaemon(True)
     t.start()
-t1.join()
+
+for t in threads:
+    t.join()

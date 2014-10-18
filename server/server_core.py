@@ -27,7 +27,6 @@ def handle_online_msg(msg, ch, method):
         'created_at': int(time.time()),
         'message': [{'id': client['id'], 'user_name': client['user_name']} for client in client_list],
     }
-
     ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
     ch.basic_publish(exchange=EXCHANGE_NAME,
                      routing_key=msg['user_id'],
@@ -55,19 +54,14 @@ def handle_offline_msg(msg, ch, method):
     ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
     for client in client_list:
         ch.basic_publish(exchange=EXCHANGE_NAME,
-                         routing_key=msg['user_id'],
+                         routing_key=client['user_id'],
                          body=json.dumps(response_msg))
     print "server60 end handle_offline_msg"
 
 
 def handle_normal_msg(msg, ch, method):
     print "server48", msg
-
-    client_list = [{
-        'id': 1,
-        'user_name': 'kate',
-        'user_id': msg['user_id'],
-    }]
+    global client_list
 
     d_client = {}
     for client in client_list:
@@ -81,7 +75,7 @@ def handle_normal_msg(msg, ch, method):
     response_msg = {
         'type': 'normal',
         'from': msg['from'],
-        'from_id': 1,
+        'from_id': '',
         'destination': msg['destination'],
         'destination_id': msg['destination_id'],
         'created_at': int(time.time()),
