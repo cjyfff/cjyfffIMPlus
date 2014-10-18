@@ -38,9 +38,9 @@ def handle_online_msg(msg, ch, method):
 
 def handle_offline_msg(msg, ch, method):
     global client_list
-    for i in xrange(len(client_list)):
-        if client_list[i]['user_id'] == msg['user_id']:
-            del client_list[i]
+    for i in client_list:
+        if i['user_id'] == msg['user_id']:
+            client_list.remove(i)
     print "server44", client_list
     ch.basic_ack(delivery_tag = method.delivery_tag)
 
