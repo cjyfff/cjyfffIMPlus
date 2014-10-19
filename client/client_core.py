@@ -98,6 +98,15 @@ class SendNormalMsg(object):
         for item in client_list:
             print "id: %s    name: %s" % (item['id'], item['user_name'])
 
+    def check_did(self, did):
+        global client_list
+        if not did:
+            HandleError.did_is_none()
+            return False
+        if did not in [i['id'] for i in client_list]:
+            HandleError.did_is_invalid()
+            return False
+
     def run(self):
         while 1:
             msg = raw_input("> ")
@@ -116,9 +125,10 @@ class SendNormalMsg(object):
             except (ValueError, IndexError):
                 did = self.did
                 msg_content = msg
-            if not did:
-                HandleError.invalid_did()
+
+            if not self.check_did(did):
                 continue
+
             normal_msg = self.msg
             normal_msg.update({
                 'destination_id': did,
@@ -196,8 +206,12 @@ class MyThread(threading.Thread):
 class HandleError(object):
 
     @classmethod
-    def invalid_did(self):
+    def did_is_none(self):
         print "Please enter the id of the user you want to talk!"
+
+    @classmethod
+    def did_is_invalid(self):
+        print "This user id is not valid, please enter an valid one!"
 
 
 connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQServer))
