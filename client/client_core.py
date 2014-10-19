@@ -17,6 +17,7 @@ client_list = {}
 
 username = os.environ['USER']
 user_id = uuid4().hex
+
 online_msg = {
     'type': 'online',
     'from': username,

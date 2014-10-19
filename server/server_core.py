@@ -112,7 +112,6 @@ def main():
         channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
         channel.queue_declare(queue='server_q', durable=True)
         channel.queue_bind(exchange=EXCHANGE_NAME, queue='server_q', routing_key='server')
-        print usage
         print " [*] Waiting for client"
 
         channel.basic_qos(prefetch_count=1)
@@ -121,13 +120,3 @@ def main():
     except (KeyboardInterrupt, SystemError):
         connection.close()
         print " [*] Server exit..."
-
-
-usage = '''
-cjyfffIMPlus server v0.80
-输入'Ctrl' + 'c'可以退出服务
-'''
-
-
-if __name__ == '__main__':
-    main()

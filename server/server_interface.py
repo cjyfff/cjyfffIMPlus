@@ -4,9 +4,10 @@ from server_core import main
 
 
 usage = '''
-cjyfffIMPlus server v0.80
-输入'Ctrl' + 'c'可以退出服务
+[cjyfffIMPlus server v0.80]
+输入'ctrl' + 'c'可以退出服务
 '''
 
 if __name__ == '__main__':
+    print usage
     main()
