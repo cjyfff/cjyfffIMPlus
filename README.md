@@ -35,66 +35,66 @@ RabbitMQ 3.2.4
 输入'quit'或者'exit'退出程序   
    
 ###5、消息协议（example）：   
-客户端发送一般信息给服务器的格式，routing_key: 'server'：   
-{   
-    'type': 'normal',    
-    'from': 'jackson',   
-    'user_id': '4b3f76fb2c96495cbc365cd005c147d6', #采用uuid4生成   
-    'destination': 'kate',   
-    'destination_id': 1,   
-    'created_at': '1412318244',   
-    'message': 'balabalabala',   
-}   
-
-服务器转发一般信息给客户端的格式（[user_id]代表目标用户的user_id），routing_key: [user_id]:   
-{   
-    'type': 'normal',    
-    'from': 'kate',   
-    'from_id': 2,   
-    'user_id': '',   
-    'destination': 'jackson',   
-    'destination_id': 1,   
-    'created_at': '1412318254',   
-    'message': 'balabalabala',   
-}   
-   
-上线信息, routing_key: 'system'：   
-{   
-    'type': 'online',    
-    'from': 'jackson',   
-    'user_id': '4b3f76fb2c96495cbc365cd005c147d6',   
-    'created_at': '1412318244',   
-    'message': {'prublic_key': '-----BEGIN RSA PUBLIC KEY...'},  #RSA加密的公钥   
-}   
-   
-下线信息（发给服务器）, routing_key: 'system'：   
-{   
-    'type': 'offline',    
-    'from': 'jackson',   
-    'user_id': '4b3f76fb2c96495cbc365cd005c147d6',   
-    'created_at': '1412318244',   
-    'message': '',   
-}   
-   
-下线信息（发给自身），routing_key：[uuid]   
-{   
-    'type': 'self_offline',    
-    'from': 'jackson',   
-    'user_id': '4b3f76fb2c96495cbc365cd005c147d6',   
-    'created_at': '1412318244',   
-    'message': '',   
-}   
-   
-服务器反馈客户端列表给客户端。当某客户上线时，反馈给所有客户；当某客户下线时，反馈给除了该客户以外的所有客户。routing_key: [user_id]：   
-{   
-    'type': 'client_list',   
-    'created_at': '1412318244',   
-    'message': [   
-        {'id': 1,   
-          'user_name': 'kate',   
-        },   
-        {'id': 2,   
-          'user_name': 'mike',   
-        },   
-    ]   
-}   
+    客户端发送一般信息给服务器的格式，routing_key: 'server'：   
+    {   
+        'type': 'normal',    
+        'from': 'jackson',   
+        'user_id': '4b3f76fb2c96495cbc365cd005c147d6', #采用uuid4生成   
+        'destination': 'kate',   
+        'destination_id': 1,   
+        'created_at': '1412318244',   
+        'message': 'balabalabala',   
+    }   
+    
+    服务器转发一般信息给客户端的格式（[user_id]代表目标用户的user_id），routing_key: [user_id]:   
+    {   
+        'type': 'normal',    
+        'from': 'kate',   
+        'from_id': 2,   
+        'user_id': '',   
+        'destination': 'jackson',   
+        'destination_id': 1,   
+        'created_at': '1412318254',   
+        'message': 'balabalabala',   
+    }   
+       
+    上线信息, routing_key: 'system'：   
+    {   
+        'type': 'online',    
+        'from': 'jackson',   
+        'user_id': '4b3f76fb2c96495cbc365cd005c147d6',   
+        'created_at': '1412318244',   
+        'message': {'prublic_key': '-----BEGIN RSA PUBLIC KEY...'},  #RSA加密的公钥   
+    }   
+       
+    下线信息（发给服务器）, routing_key: 'system'：   
+    {   
+        'type': 'offline',    
+        'from': 'jackson',   
+        'user_id': '4b3f76fb2c96495cbc365cd005c147d6',   
+        'created_at': '1412318244',   
+        'message': '',   
+    }   
+       
+    下线信息（发给自身），routing_key：[uuid]   
+    {   
+        'type': 'self_offline',    
+        'from': 'jackson',   
+        'user_id': '4b3f76fb2c96495cbc365cd005c147d6',   
+        'created_at': '1412318244',   
+        'message': '',   
+    }   
+       
+    服务器反馈客户端列表给客户端。当某客户上线时，反馈给所有客户；当某客户下线时，反馈给除了该客户以外的所有客户。routing_key: [user_id]：   
+    {   
+        'type': 'client_list',   
+        'created_at': '1412318244',   
+        'message': [   
+            {'id': 1,   
+              'user_name': 'kate',   
+            },   
+            {'id': 2,   
+              'user_name': 'mike',   
+            },   
+        ]   
+    }   
