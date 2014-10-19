@@ -59,7 +59,8 @@ class SendOnlineMsg(object):
         self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
         self.channel.basic_publish(exchange=EXCHANGE_NAME,
                                    routing_key='server',
-                                   body=online_msg)
+                                   body=online_msg,
+                                   properties=pika.BasicProperties(delivery_mode=2))
 
 
 class SendNormalMsg(object):
@@ -78,14 +79,16 @@ class SendNormalMsg(object):
         self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
         self.channel.basic_publish(exchange=EXCHANGE_NAME,
                                    routing_key='server',
-                                   body=json.dumps(self.quit_msg))
+                                   body=json.dumps(self.quit_msg),
+                                   properties=pika.BasicProperties(delivery_mode=2))
 
         # send quit msg to client itself
         self.quit_msg.update({'type': 'self_offline'})
         self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
         self.channel.basic_publish(exchange=EXCHANGE_NAME,
                                    routing_key=self.user_id,
-                                   body=json.dumps(self.quit_msg))
+                                   body=json.dumps(self.quit_msg),
+                                   properties=pika.BasicProperties(delivery_mode=2))
         self.connection.close()
         print "client77, send all quit msg"
 
@@ -108,7 +111,7 @@ class SendNormalMsg(object):
 
             try:
                 did = int(msg.split(' ')[0])
-                msg_content = msg.split(' ')[1]
+                msg_content = msg[2:]
                 self.did = did
             except (ValueError, IndexError):
                 did = self.did
@@ -125,8 +128,9 @@ class SendNormalMsg(object):
             normal_msg = json.dumps(normal_msg)
             self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
             self.channel.basic_publish(exchange=EXCHANGE_NAME,
-                                   routing_key='server',
-                                   body=normal_msg)
+                                       routing_key='server',
+                                       body=normal_msg,
+                                       properties=pika.BasicProperties(delivery_mode=2))
 
 
 class ReceiveMsg(object):
@@ -137,10 +141,12 @@ class ReceiveMsg(object):
         self.user_id = self.msg['user_id']
         self.channel = self.connection.channel()
         self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
-        self.channel.queue_declare(queue='user_q')
+        queue_name = 'user_q' + self.user_id
+        self.channel.queue_declare(queue=queue_name, durable=True)
         self.channel.queue_bind(exchange=EXCHANGE_NAME,
-                                queue='user_q',
+                                queue=queue_name,
                                 routing_key=self.user_id)
+
         # In order to handeling online respone from server while
         # sending online msg, the function of sending online msg must be run
         # as the same time as runing receiving msg function.
@@ -162,8 +168,9 @@ class ReceiveMsg(object):
             print "from %s: %s" % (body['from'], body['message'])
 
     def run(self):
+        queue_name = 'user_q' + self.user_id
         self.channel.basic_qos(prefetch_count=1)
-        for method_frame, properties, body in self.channel.consume('user_q'):
+        for method_frame, properties, body in self.channel.consume(queue_name):
             body = json.loads(body)
             self.on_response(body)
             self.channel.basic_ack(method_frame.delivery_tag)

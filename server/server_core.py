@@ -12,6 +12,7 @@ client_list = []
 
 def handle_online_msg(msg, ch, method):
     global client_list
+    print "server15", msg
     user_id_list = []
     for i in client_list:
         user_id_list.append(i['user_id'])
@@ -26,12 +27,15 @@ def handle_online_msg(msg, ch, method):
     response_msg = {
         'type': 'client_list',
         'created_at': int(time.time()),
-        'message': [{'id': client['id'], 'user_name': client['user_name']} for client in client_list],
+        'message': [{'id': client['id'],
+                     'user_name': client['user_name']} for client in client_list],
     }
     ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
-    ch.basic_publish(exchange=EXCHANGE_NAME,
-                     routing_key=msg['user_id'],
-                     body=json.dumps(response_msg))
+    for client in client_list:
+        ch.basic_publish(exchange=EXCHANGE_NAME,
+                         routing_key=client['user_id'],
+                         body=json.dumps(response_msg),
+                         properties=pika.BasicProperties(delivery_mode=2))
     ch.basic_ack(delivery_tag = method.delivery_tag)
     print "server35 end handle_online_msg"
 
@@ -50,13 +54,15 @@ def handle_offline_msg(msg, ch, method):
     response_msg = {
         'type': 'client_list',
         'created_at': int(time.time()),
-        'message': [{'id': client['id'], 'user_name': client['user_name']} for client in client_list],
+        'message': [{'id': client['id'],
+                     'user_name': client['user_name']} for client in client_list],
         }
     ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
     for client in client_list:
         ch.basic_publish(exchange=EXCHANGE_NAME,
                          routing_key=client['user_id'],
-                         body=json.dumps(response_msg))
+                         body=json.dumps(response_msg),
+                         properties=pika.BasicProperties(delivery_mode=2))
     print "server60 end handle_offline_msg"
 
 
@@ -86,8 +92,9 @@ def handle_normal_msg(msg, ch, method):
     ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
     ch.basic_publish(exchange=EXCHANGE_NAME,
                      routing_key=d_user_id,
-                     body=json.dumps(response_msg))
-    ch.basic_ack(delivery_tag = method.delivery_tag)
+                     body=json.dumps(response_msg),
+                     properties=pika.BasicProperties(delivery_mode=2))
+    ch.basic_ack(delivery_tag=method.delivery_tag)
 
 
 def request(ch, method, properties, body):
@@ -110,7 +117,7 @@ def main():
                 host='localhost'))
         channel = connection.channel()
         channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
-        channel.queue_declare(queue='server_q')
+        channel.queue_declare(queue='server_q', durable=True)
         channel.queue_bind(exchange=EXCHANGE_NAME, queue='server_q', routing_key='server')
         print " [*] Waiting for client"
 
