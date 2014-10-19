@@ -90,7 +90,6 @@ class SendNormalMsg(object):
                                    body=json.dumps(self.quit_msg),
                                    properties=pika.BasicProperties(delivery_mode=2))
         self.connection.close()
-        print "client77, send all quit msg"
 
     def print_client_list(self):
         global client_list
@@ -106,6 +105,7 @@ class SendNormalMsg(object):
         if did not in [i['id'] for i in client_list]:
             HandleError.did_is_invalid()
             return False
+        return True
 
     def run(self):
         while 1:
@@ -169,7 +169,6 @@ class ReceiveMsg(object):
         client_list = body['message']
 
     def on_response(self, body):
-        print "client100", body
         if body['type'] == 'client_list':
             self.save_client_list(body)
         elif body['type'] == 'self_offline':
@@ -187,7 +186,6 @@ class ReceiveMsg(object):
             if body['type'] == 'self_offline':
                 break
         self.connection.close()
-        print "receive quit"
 
 
 class MyThread(threading.Thread):
@@ -214,19 +212,19 @@ class HandleError(object):
         print "This user id is not valid, please enter an valid one!"
 
 
-connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQServer))
+def main():
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQServer))
+    send_normal_msg = SendNormalMsg(normal_msg, quit_msg)
+    recive_msg = ReceiveMsg(normal_msg, connection, online_msg)
 
-send_normal_msg = SendNormalMsg(normal_msg, quit_msg)
-recive_msg = ReceiveMsg(normal_msg, connection, online_msg)
+    threads = []
+    t1 = MyThread(send_normal_msg.run, (), )
+    threads.append(t1)
+    t2 = MyThread(recive_msg.run, (), )
+    threads.append(t2)
 
-threads = []
-t1 = MyThread(send_normal_msg.run, (), )
-threads.append(t1)
-t2 = MyThread(recive_msg.run, (), )
-threads.append(t2)
+    for t in threads:
+        t.start()
 
-for t in threads:
-    t.start()
-
-for t in threads:
-    t.join()
+    for t in threads:
+        t.join()
