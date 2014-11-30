@@ -13,7 +13,7 @@ from uuid import uuid4
 EXCHANGE_NAME = settings.exchange_name
 MQServer = settings.mq_server
 
-client_list = {}
+client_list = []
 
 
 class SendOnlineMsg(object):
