@@ -15,35 +15,6 @@ MQServer = settings.mq_server
 
 client_list = {}
 
-username = os.environ['USER']
-user_id = uuid4().hex
-
-online_msg = {
-    'type': 'online',
-    'from': username,
-    'user_id': user_id,
-    'created_at': 0,
-    'message': '',
-}
-
-normal_msg = {
-    'type': 'normal',
-    'from': username,
-    'user_id': user_id,
-    'destination': 'myself',
-    'destination_id': 1,
-    'created_at': '',
-    'message': '',
-}
-
-quit_msg = {
-    'type': 'offline',
-    'from': username,
-    'user_id': user_id,
-    'created_at': '',
-    'message': '',
-}
-
 
 class SendOnlineMsg(object):
 
@@ -214,6 +185,35 @@ class HandleError(object):
 
 
 def main():
+    username = os.environ['USER']
+    user_id = uuid4().hex
+
+    online_msg = {
+        'type': 'online',
+        'from': username,
+        'user_id': user_id,
+        'created_at': 0,
+        'message': '',
+    }
+
+    normal_msg = {
+        'type': 'normal',
+        'from': username,
+        'user_id': user_id,
+        'destination': 'myself',
+        'destination_id': 1,
+        'created_at': '',
+        'message': '',
+    }
+
+    quit_msg = {
+        'type': 'offline',
+        'from': username,
+        'user_id': user_id,
+        'created_at': '',
+        'message': '',
+    }
+
     connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQServer))
     send_normal_msg = SendNormalMsg(normal_msg, quit_msg)
     recive_msg = ReceiveMsg(normal_msg, connection, online_msg)
