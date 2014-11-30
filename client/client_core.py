@@ -94,7 +94,7 @@ class SendNormalMsg(object):
 
     def print_client_list(self):
         global client_list
-        # TODO: exculde client itself
+        # TODO: exclude client itself
         for item in client_list:
             print "id: %s    name: %s" % (item['id'], item['user_name'])
 
@@ -166,7 +166,7 @@ class ReceiveMsg(object):
 
     def save_client_list(self, body):
         global client_list
-        # TODO: exculde client itself
+        # TODO: exclude client itself
         client_list = body['message']
 
     def on_response(self, body):
