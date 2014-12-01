@@ -1,27 +1,34 @@
 ##cjyfffIMPlus: 一个基于RabbitMQ的多人即时通讯程序   
    
-###1 描述：   
+###1、描述   
 cjyfffIMPlus是一个基于RabbitMQ的多人即时通讯程序，采用C\S模式，能够检测用户的上线和下线，对用户信息进行加密并实现持久化，并且实现多人同时双向通信。   
    
-###2 版本历史：    
-   
+###2、版本历史    
+0.8.1    
+发布日期：2014.12.2    
+更新内容：对信息实现RSA加密   
 0.8.0   
 发布日期： 2014.10.19   
 更新内容：实现程序基本功能。   
    
-###3 依赖：   
+###3、依赖   
    
 客户端：   
-python 2.7   
-pika 0.9.13   
-RabbitMQ 3.2.4   
+python == 2.7   
+pika == 0.9.13   
+RabbitMQ == 3.2.4   
+rsa == 3.1.4   
    
 服务器端：   
-python 2.7   
-pika 0.9.13   
-RabbitMQ 3.2.4   
+python == 2.7   
+pika == 0.9.13    
+RabbitMQ == 3.2.4    
    
-###4 使用方法：   
+###4、部分工作原理    
+关于解密与加密   
+客户端一开始运行时，都会生成一对密钥。在发送上线信息给服务器端时，会把prublic_key 包含到上线信息当中。服务器端会在广播信息中把该用户的prublic_key发给所有用户，当A用户要和B用户通信时，A用户会把要发送的信息用B用户的prublic_key加密，然后通过服务器把信息转发给B，B用户收到信息后，就用自己的private_key解密信息。   
+   
+###5、使用方法：   
    
 服务器端：   
 运行server_core.py   
@@ -34,68 +41,69 @@ RabbitMQ 3.2.4
 假如没有指定用户id的话，消息将发送到上一次所指定的用户   
 输入'quit'或者'exit'退出程序   
    
-###5 消息协议（example）：   
-    客户端发送一般信息给服务器的格式，routing_key: 'server'：   
-    {   
-        'type': 'normal',    
-        'from': 'jackson',   
-        'user_id': '4b3f76fb2c96495cbc365cd005c147d6', #采用uuid4生成   
-        'destination': 'kate',   
-        'destination_id': 1,   
-        'created_at': '1412318244',   
-        'message': 'balabalabala',   
-    }   
+###6、消息协议（example）：   
+    一般通信信息，由客户端发送给服务器，routing_key: 'server'：
+    {
+        'type': 'normal', 
+        'from': 'jackson',
+        'user_id': '4b3f76fb2c96495cbc365cd005c147d6', #采用uuid4生成
+        'destination': 'kate',
+        'destination_id': 1,
+        'created_at': '1412318244',
+        'message': 'balabalabala',
+    }
     
-    服务器转发一般信息给客户端的格式（[user_id]代表目标用户的user_id），routing_key: [user_id]:   
-    {   
-        'type': 'normal',    
-        'from': 'kate',   
-        'from_id': 2,   
-        'user_id': '',   
-        'destination': 'jackson',   
-        'destination_id': 1,   
-        'created_at': '1412318254',   
-        'message': 'balabalabala',   
-    }   
-       
-    上线信息, routing_key: 'system'：   
-    {   
-        'type': 'online',    
-        'from': 'jackson',   
-        'user_id': '4b3f76fb2c96495cbc365cd005c147d6',   
-        'created_at': '1412318244',   
-        'message': {'prublic_key': '-----BEGIN RSA PUBLIC KEY...'},  #RSA加密的公钥   
-    }   
-       
-    下线信息（发给服务器）, routing_key: 'system'：   
-    {   
-        'type': 'offline',    
-        'from': 'jackson',   
-        'user_id': '4b3f76fb2c96495cbc365cd005c147d6',   
-        'created_at': '1412318244',   
-        'message': '',   
-    }   
-       
-    下线信息（发给自身），routing_key：[uuid]   
-    {   
-        'type': 'self_offline',    
-        'from': 'jackson',   
-        'user_id': '4b3f76fb2c96495cbc365cd005c147d6',   
-        'created_at': '1412318244',   
-        'message': '',   
-    }   
-       
-    服务器反馈客户端列表给客户端。当某客户上线时，反馈给所有客户；
-    当某客户下线时，反馈给除了该客户以外的所有客户。routing_key: [user_id]：   
-    {   
-        'type': 'client_list',   
-        'created_at': '1412318244',   
-        'message': [   
-            {'id': 1,   
-              'user_name': 'kate',   
-            },   
-            {'id': 2,   
-              'user_name': 'mike',   
-            },   
-        ]   
-    }   
+    服务器转发信息，由服务器发给客户端，routing_key: [user_id]:
+    {
+        'type': 'normal', 
+        'from': 'kate',
+        'from_id': 2,
+        'user_id': '',
+        'destination': 'jackson',
+        'destination_id': 1,
+        'created_at': '1412318254',
+        'message': 'balabalabala',
+    }
+    
+    上线信息，由客户端发给服务器，routing_key: 'system'：
+    {
+        'type': 'online', 
+        'from': 'jackson',
+        'user_id': '4b3f76fb2c96495cbc365cd005c147d6',
+        'created_at': '1412318244',
+        'message': {'prublic_key': '-----BEGIN RSA PUBLIC KEY...'},  #RSA加密的公钥
+    }
+    
+    下线信息，由客户端发给服务器，routing_key: 'system'：
+    {
+        'type': 'offline', 
+        'from': 'jackson',
+        'user_id': '4b3f76fb2c96495cbc365cd005c147d6',
+        'created_at': '1412318244',
+        'message': '',
+    }
+    
+    下线信息，由客户端发给自己，以便退出程序，routing_key：[uuid]
+    {
+        'type': 'self_offline', 
+        'from': 'jackson',
+        'user_id': '4b3f76fb2c96495cbc365cd005c147d6',
+        'created_at': '1412318244',
+        'message': '',
+    }
+    
+    反馈客户端列表信息。由服务器发给客户端。当某客户上线时，反馈给所有客户；当某客户下线时，反馈给除了该客户以外的所有客户。routing_key: [user_id]：
+    {
+        'type': 'client_list',
+        'created_at': '1412318244',
+        'message': [
+            {'id': 1,
+              'user_name': 'kate',
+              'prublic_key': '----BEGIN RSA PUBLIC KEY...',
+            },
+            {'id': 2,
+              'user_name': 'mike',
+              'prublic_key': '----BEGIN RSA PUBLIC KEY...',
+            },
+        ]
+    }
