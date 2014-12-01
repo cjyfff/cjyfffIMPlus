@@ -21,13 +21,15 @@ def handle_online_msg(msg, ch, method):
             'id': len(client_list) + 1,
             'user_name': msg['from'],
             'user_id': msg['user_id'],
+            'prublic_key': msg['message']['prublic_key'],
         })
 
     response_msg = {
         'type': 'client_list',
         'created_at': int(time.time()),
         'message': [{'id': client['id'],
-                     'user_name': client['user_name']} for client in client_list],
+                     'user_name': client['user_name'],
+                     'prublic_key': client['prublic_key']} for client in client_list],
     }
     ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
     for client in client_list:

@@ -4,7 +4,7 @@ from server_core import main
 
 
 usage = '''
-[cjyfffIMPlus server v0.80]
+[cjyfffIMPlus server v0.81]
 输入'ctrl' + 'c'可以退出服务
 '''
 

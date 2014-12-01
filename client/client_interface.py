@@ -3,7 +3,7 @@
 from client_core import main
 
 usage = '''
-[cjyfffIMPlus client v0.80]
+[cjyfffIMPlus client v0.81]
 输入'client_list'或者'cl'查看当前在线的用户
 输入用户对应的id + 空格 + 想要发送的消息，即可向该id对应的用户发送消息
 例如输入'1 hello'，将会向id为1的用户发送消息"hello"

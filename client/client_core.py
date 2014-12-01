@@ -7,6 +7,7 @@ import time
 import json
 import threading
 import copy
+import rsa
 import settings
 from uuid import uuid4
 
@@ -14,6 +15,8 @@ EXCHANGE_NAME = settings.exchange_name
 MQServer = settings.mq_server
 
 client_list = []
+(pubkey, privkey) = rsa.newkeys(1024)
+pubkey = pubkey.save_pkcs1()
 
 
 class SendOnlineMsg(object):
@@ -26,7 +29,8 @@ class SendOnlineMsg(object):
 
     def run(self):
         online_msg = self.msg
-        online_msg.update({'created_at': int(time.time())})
+        online_msg.update({'created_at': int(time.time()),
+                           'message': {'prublic_key': pubkey}})
         online_msg = json.dumps(online_msg)
         self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
         self.channel.basic_publish(exchange=EXCHANGE_NAME,
@@ -66,8 +70,8 @@ class SendNormalMsg(object):
     def print_client_list(self):
         global client_list
         # TODO: exclude client itself
-        for item in client_list:
-            print "id: %s    name: %s" % (item['id'], item['user_name'])
+        for client in client_list:
+            print "id: %s    name: %s" % (client['id'], client['user_name'])
 
     def check_did(self, did):
         global client_list
@@ -78,6 +82,15 @@ class SendNormalMsg(object):
             HandleError.did_is_invalid()
             return False
         return True
+
+    def encrypt_msg(self, did, content):
+        global client_list
+        for client in client_list:
+            if client['id'] == did:
+                destination_pubkey = client['prublic_key']
+                break
+        encrypt_content = rsa.encrypt(content, rsa.PublicKey.load_pkcs1(destination_pubkey))
+        return encrypt_content
 
     def run(self):
         while 1:
@@ -101,13 +114,14 @@ class SendNormalMsg(object):
             if not self.check_did(did):
                 continue
 
+            msg_content = self.encrypt_msg(did, msg_content)
             normal_msg = self.msg
             normal_msg.update({
                 'destination_id': did,
                 'created_at': int(time.time()),
-                'message': msg_content,
+                'message': msg_content.decode('latin-1'),
             })
-            normal_msg = json.dumps(normal_msg)
+            normal_msg = json.dumps(normal_msg, ensure_ascii=False)
             self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
             self.channel.basic_publish(exchange=EXCHANGE_NAME,
                                        routing_key='server',
@@ -140,13 +154,24 @@ class ReceiveMsg(object):
         # TODO: exclude client itself
         client_list = body['message']
 
+    def decrypt_msg(self, content):
+        try:
+            return rsa.decrypt(content, privkey)
+        except rsa.DecryptionError:
+            HandleError.decryption_error()
+            return False
+
     def on_response(self, body):
         if body['type'] == 'client_list':
             self.save_client_list(body)
         elif body['type'] == 'self_offline':
             pass
         else:
-            print "from %s: %s" % (body['from'], body['message'])
+            msg = self.decrypt_msg(body['message'].encode('latin-1'))
+            if msg:
+                print "from %s: %s" % (body['from'], msg)
+            else:
+                pass
 
     def run(self):
         queue_name = 'user_q' + self.user_id
@@ -182,6 +207,10 @@ class HandleError(object):
     @classmethod
     def did_is_invalid(self):
         print "This user id is not valid, please enter an valid one!"
+
+    @classmethod
+    def decryption_error(self):
+        print "Decryption error, please connect again."
 
 
 def main():
