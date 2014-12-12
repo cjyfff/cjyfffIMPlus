@@ -129,5 +129,5 @@ def main():
         print " [*] Server exit..."
     except Exception, e:
         logging.error(e)
-        print "Some error had happened and the server is down."
+        print "\033[0;31;1m%s\033[0m" % ("This error had happened and the server is down: " + e)
         sys.exit(1)
