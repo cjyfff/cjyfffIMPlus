@@ -5,6 +5,9 @@ import pika
 import json
 import time
 import settings
+import logging
+import sys
+import os
 
 EXCHANGE_NAME = settings.exchange_name
 client_list = []
@@ -107,6 +110,8 @@ def request(ch, method, properties, body):
 
 
 def main():
+    logging.basicConfig(filename=os.path.join(os.getcwd(), 'cjyfffIM.log'),
+                        level=logging.WARN, filemode = 'w+', format='%(asctime)s - %(levelname)s: %(message)s')
     try:
         connection = pika.BlockingConnection(pika.ConnectionParameters(
                 host='localhost'))
@@ -119,6 +124,10 @@ def main():
         channel.basic_qos(prefetch_count=1)
         channel.basic_consume(request, queue='server_q')
         channel.start_consuming()
-    except (KeyboardInterrupt, SystemError):
+    except KeyboardInterrupt:
         connection.close()
         print " [*] Server exit..."
+    except Exception, e:
+        logging.error(e)
+        print "Some error had happened and the server is down."
+        sys.exit(1)
