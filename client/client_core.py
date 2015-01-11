@@ -19,7 +19,20 @@ client_list = []
 pubkey = pubkey.save_pkcs1()
 
 
+class Singleton(type):
+
+    def __init__(cls, name, bases, dic):
+        cls.instance = None
+
+    def __call__(cls, *args, **kwargs):
+        if cls.instance is None:
+            cls.instance = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls.instance
+
+
 class SendOnlineMsg(object):
+
+    __metaclass__ = Singleton
 
     def __init__(self, connection, msg):
         self.connection = connection
