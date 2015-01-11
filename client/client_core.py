@@ -145,6 +145,7 @@ class SendNormalMsg(object):
 class ReceiveMsg(object):
 
     def __init__(self, msg, connection, online_msg):
+        self.client_list = None
         self.connection = connection
         self.msg = msg
         self.user_id = self.msg['user_id']
@@ -162,8 +163,14 @@ class ReceiveMsg(object):
         send_online_msg = SendOnlineMsg(connection, online_msg)
         send_online_msg.run()
 
+    def notify_client_list_has_changed(self, body):
+        if self.client_list is not None and body['message'] != self.client_list:
+            print "Warning! client list has changed, enter 'cl' or 'client_list' to confirm."
+        self.client_list = body['message']
+
     def save_client_list(self, body):
         global client_list
+        self.notify_client_list_has_changed(body)
         # TODO: exclude client itself
         client_list = body['message']
 
