@@ -107,6 +107,8 @@ class SendNormalMsg(object):
     def run(self):
         while 1:
             msg = raw_input("> ")
+            if not msg:
+                continue
             if msg in ['quit', 'exit']:
                 self.send_quit_msg()
                 time.sleep(1)
@@ -182,7 +184,6 @@ class ReceiveMsg(object):
             return False
 
     def on_response(self, body):
-        print "cli185", body
         if body['type'] == 'client_list':
             self.save_client_list(body)
         elif body['type'] == 'self_offline':
@@ -250,7 +251,7 @@ def main():
         'type': 'normal',
         'from': username,
         'user_id': user_id,
-        'destination': 'myself',
+        'destination': 'retain',
         'destination_id': 1,
         'created_at': '',
         'message': '',

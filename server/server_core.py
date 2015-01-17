@@ -72,7 +72,6 @@ class HandleOfflineMsg(BaseHandler):
                         'user_name': client['user_name'],
                         'prublic_key': client['prublic_key']} for client in client_list],
         }
-        print "se105", response_msg
         self.ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
         for client in client_list:
             self.ch.basic_publish(exchange=EXCHANGE_NAME,
