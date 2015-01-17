@@ -182,6 +182,7 @@ class ReceiveMsg(object):
             return False
 
     def on_response(self, body):
+        print "cli185", body
         if body['type'] == 'client_list':
             self.save_client_list(body)
         elif body['type'] == 'self_offline':

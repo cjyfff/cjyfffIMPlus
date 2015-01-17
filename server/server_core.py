@@ -13,106 +13,124 @@ EXCHANGE_NAME = settings.exchange_name
 client_list = []
 
 
-def handle_online_msg(msg, ch, method):
-    global client_list
-    user_id_list = []
-    for i in client_list:
-        user_id_list.append(i['user_id'])
+class BaseHandler(object):
 
-    if msg['user_id'] not in user_id_list:
-        client_list.append({
-            'id': len(client_list) + 1,
-            'user_name': msg['from'],
-            'user_id': msg['user_id'],
-            'prublic_key': msg['message']['prublic_key'],
-        })
-
-    response_msg = {
-        'type': 'client_list',
-        'created_at': int(time.time()),
-        'message': [{'id': client['id'],
-                     'user_name': client['user_name'],
-                     'prublic_key': client['prublic_key']} for client in client_list],
-    }
-    ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
-    for client in client_list:
-        ch.basic_publish(exchange=EXCHANGE_NAME,
-                         routing_key=client['user_id'],
-                         body=json.dumps(response_msg),
-                         properties=pika.BasicProperties(delivery_mode=2))
-    ch.basic_ack(delivery_tag = method.delivery_tag)
+    def __init__(self, msg, ch, method):
+        self.msg = msg
+        self.ch = ch
+        self.method = method
 
 
-def handle_offline_msg(msg, ch, method):
-    global client_list
-    for i in client_list:
-        if i['user_id'] == msg['user_id']:
-            client_list.remove(i)
-    ch.basic_ack(delivery_tag = method.delivery_tag)
+class HandleOnlineMsg(BaseHandler):
 
-    if not client_list:
-        return 0
+    def run(self):
+        global client_list
+        user_id_list = []
+        for i in client_list:
+            user_id_list.append(i['user_id'])
 
-    response_msg = {
-        'type': 'client_list',
-        'created_at': int(time.time()),
-        'message': [{'id': client['id'],
-                     'user_name': client['user_name'],
-                     'prublic_key': client['prublic_key']} for client in client_list],
+        if self.msg['user_id'] not in user_id_list:
+            client_list.append({
+                    'id': len(client_list) + 1,
+                    'user_name': self.msg['from'],
+                    'user_id': self.msg['user_id'],
+                    'prublic_key': self.msg['message']['prublic_key'],
+            })
+
+        response_msg = {
+                'type': 'client_list',
+                'created_at': int(time.time()),
+                'message': [{'id': client['id'],
+                             'user_name': client['user_name'],
+                             'prublic_key': client['prublic_key']} for client in client_list],
+            }
+        self.ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
+        for client in client_list:
+            self.ch.basic_publish(exchange=EXCHANGE_NAME,
+                                  routing_key=client['user_id'],
+                                  body=json.dumps(response_msg),
+                                  properties=pika.BasicProperties(delivery_mode=2))
+        self.ch.basic_ack(delivery_tag=self.method.delivery_tag)
+
+
+class HandleOfflineMsg(BaseHandler):
+
+    def run(self):
+        global client_list
+        for i in client_list:
+            if i['user_id'] == self.msg['user_id']:
+                client_list.remove(i)
+        self.ch.basic_ack(delivery_tag = self.method.delivery_tag)
+
+        if not client_list:
+            return
+
+        response_msg = {
+            'type': 'client_list',
+            'created_at': int(time.time()),
+            'message': [{'id': client['id'],
+                        'user_name': client['user_name'],
+                        'prublic_key': client['prublic_key']} for client in client_list],
         }
-    ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
-    for client in client_list:
-        ch.basic_publish(exchange=EXCHANGE_NAME,
-                         routing_key=client['user_id'],
-                         body=json.dumps(response_msg),
-                         properties=pika.BasicProperties(delivery_mode=2))
+        print "se105", response_msg
+        self.ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
+        for client in client_list:
+            self.ch.basic_publish(exchange=EXCHANGE_NAME,
+                                  routing_key=client['user_id'],
+                                  body=json.dumps(response_msg),
+                                  properties=pika.BasicProperties(delivery_mode=2))
 
 
-def handle_normal_msg(msg, ch, method):
-    global client_list
+class HandleNormalMsg(BaseHandler):
 
-    d_client = {}
-    for client in client_list:
-        if int(client['id']) == int(msg['destination_id']):
-            d_client = client
-            break
+    def run(self):
+        global client_list
 
-    # destination user's id
-    d_user_id = d_client['user_id']
-    response_msg = {
-        'type': 'normal',
-        'from': msg['from'],
-        'from_id': '',
-        'destination': msg['destination'],
-        'destination_id': msg['destination_id'],
-        'created_at': int(time.time()),
-        'message': msg['message'],
-    }
+        d_client = {}
+        for client in client_list:
+            if int(client['id']) == int(self.msg['destination_id']):
+                d_client = client
+                break
 
-    ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
-    ch.basic_publish(exchange=EXCHANGE_NAME,
-                     routing_key=d_user_id,
-                     body=json.dumps(response_msg),
-                     properties=pika.BasicProperties(delivery_mode=2))
-    ch.basic_ack(delivery_tag=method.delivery_tag)
+        # destination user's id
+        d_user_id = d_client['user_id']
+        response_msg = {
+            'type': 'normal',
+            'from': self.msg['from'],
+            'from_id': '',
+            'destination': self.msg['destination'],
+            'destination_id': self.msg['destination_id'],
+            'created_at': int(time.time()),
+            'message': self.msg['message'],
+        }
+
+        self.ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
+        self.ch.basic_publish(exchange=EXCHANGE_NAME,
+                              routing_key=d_user_id,
+                              body=json.dumps(response_msg),
+                              properties=pika.BasicProperties(delivery_mode=2))
+        self.ch.basic_ack(delivery_tag=self.method.delivery_tag)
 
 
 def request(ch, method, properties, body):
     msg = json.loads(body)
 
     if msg['type'] == 'online':
-        handle_online_msg(msg, ch, method)
+        handle_online_msg = HandleOnlineMsg(msg, ch, method)
+        handle_online_msg.run()
 
     elif msg['type'] == 'offline':
-        handle_offline_msg(msg, ch, method)
+        handle_offline_msg = HandleOfflineMsg(msg, ch, method)
+        handle_offline_msg.run()
 
     elif msg['type'] == 'normal':
-        handle_normal_msg(msg, ch, method)
+        handle_normal_msg = HandleNormalMsg(msg, ch, method)
+        handle_normal_msg.run()
 
 
 def main():
     logging.basicConfig(filename=os.path.join(os.getcwd(), 'cjyfffIM.log'),
-                        level=logging.WARN, filemode = 'w+', format='%(asctime)s - %(levelname)s: %(message)s')
+                        level=logging.WARN, filemode = 'a+', format='%(asctime)s - %(levelname)s: %(message)s')
     try:
         connection = pika.BlockingConnection(pika.ConnectionParameters(
                 host='localhost'))
@@ -130,5 +148,5 @@ def main():
         print " [*] Server exit..."
     except Exception, e:
         logging.error(e)
-        print "\033[0;31;1m%s\033[0m" % ("This error had happened and the server is down: " + e)
+        print "\033[0;31;1m%s\033[0m" % ("An error had happened and the server is down: " + str(e))
         sys.exit(1)
