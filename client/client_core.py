@@ -15,8 +15,6 @@ EXCHANGE_NAME = settings.exchange_name
 MQServer = settings.mq_server
 
 client_list = []
-(pubkey, privkey) = rsa.newkeys(1024)
-pubkey = pubkey.save_pkcs1()
 
 
 class Singleton(type):
@@ -34,16 +32,17 @@ class SendOnlineMsg(object):
 
     __metaclass__ = Singleton
 
-    def __init__(self, connection, msg):
+    def __init__(self, connection, msg, pubkey):
         self.connection = connection
         self.msg = copy.deepcopy(msg)
         self.user_id = self.msg['user_id']
         self.channel = self.connection.channel()
+        self.pubkey = pubkey
 
     def run(self):
         online_msg = self.msg
         online_msg.update({'created_at': int(time.time()),
-                           'message': {'prublic_key': pubkey}})
+                           'message': {'prublic_key': self.pubkey}})
         online_msg = json.dumps(online_msg)
         self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
         self.channel.basic_publish(exchange=EXCHANGE_NAME,
@@ -144,12 +143,13 @@ class SendNormalMsg(object):
 
 class ReceiveMsg(object):
 
-    def __init__(self, msg, connection, online_msg):
+    def __init__(self, msg, connection, online_msg, pubkey, privkey):
         self.client_list = None
         self.connection = connection
         self.msg = msg
         self.user_id = self.msg['user_id']
         self.channel = self.connection.channel()
+        self.privkey = privkey
         self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
         queue_name = 'user_q' + self.user_id
         self.channel.queue_declare(queue=queue_name, durable=True)
@@ -160,7 +160,7 @@ class ReceiveMsg(object):
         # In order to handeling online respone from server while
         # sending online msg, the function of sending online msg must be run
         # as the same time as runing receiving msg function.
-        send_online_msg = SendOnlineMsg(connection, online_msg)
+        send_online_msg = SendOnlineMsg(connection, online_msg, pubkey)
         send_online_msg.run()
 
     def notify_client_list_has_changed(self, body):
@@ -176,7 +176,7 @@ class ReceiveMsg(object):
 
     def decrypt_msg(self, content):
         try:
-            return rsa.decrypt(content, privkey)
+            return rsa.decrypt(content, self.privkey)
         except rsa.DecryptionError:
             HandleError.decryption_error()
             return False
@@ -263,9 +263,12 @@ def main():
         'message': '',
     }
 
+    (pubkey, privkey) = rsa.newkeys(1024)
+    pubkey = pubkey.save_pkcs1()
+
     connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQServer))
     send_normal_msg = SendNormalMsg(normal_msg, quit_msg)
-    recive_msg = ReceiveMsg(normal_msg, connection, online_msg)
+    recive_msg = ReceiveMsg(normal_msg, connection, online_msg, pubkey, privkey)
 
     threads = []
     t1 = MyThread(send_normal_msg.run, (), )
