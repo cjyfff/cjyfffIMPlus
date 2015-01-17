@@ -1,6 +1,14 @@
 #! /usr/bin/env python
 #coding=utf-8
 from client_core import main
+import logging
+
+
+class NullHandler(logging.Handler):
+
+    def emit(self, record):
+        pass
+
 
 usage = '''
 [cjyfffIMPlus client v0.82]
@@ -12,6 +20,8 @@ usage = '''
 '''
 
 if __name__ == '__main__':
+    h = NullHandler()
+    logging.getLogger('pika').addHandler(h)
     print usage
     main()
     print "Bye!"
