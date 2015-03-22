@@ -129,7 +129,8 @@ def request(ch, method, properties, body):
 
 def main():
     logging.basicConfig(filename=os.path.join(os.getcwd(), 'cjyfffIM.log'),
-                        level=logging.WARN, filemode = 'a+', format='%(asctime)s - %(levelname)s: %(message)s')
+                        level=logging.WARN, filemode = 'a+',
+                        format='%(asctime)s - %(levelname)s: %(message)s')
     try:
         connection = pika.BlockingConnection(pika.ConnectionParameters(
                 host='localhost'))
@@ -137,7 +138,7 @@ def main():
         channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
         channel.queue_declare(queue='server_q', durable=True)
         channel.queue_bind(exchange=EXCHANGE_NAME, queue='server_q', routing_key='server')
-        print " [*] Waiting for client"
+        print " [*] Server running..."
 
         channel.basic_qos(prefetch_count=1)
         channel.basic_consume(request, queue='server_q')
@@ -147,5 +148,6 @@ def main():
         print " [*] Server exit..."
     except Exception, e:
         logging.error(e)
-        print "\033[0;31;1m%s\033[0m" % ("An error had happened and the server is down: " + str(e))
+        print "\033[0;31;1m%s\033[0m" % (
+                  "An error had happened and the server is down: " + str(e))
         sys.exit(1)
