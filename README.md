@@ -98,7 +98,7 @@ python依赖库已经使用virtualenv打包（基于ubuntu14.04），进入/clie
     }
     
     反馈客户端列表信息。由服务器发给客户端。当某客户上线时，反馈给所有客户；
-    当某客户下线时，反馈给除了该客户以外的所有客户。routing_key: [user_id]：
+    当某客户下线时，反馈给除了下线客户以外的所有客户。routing_key: [user_id]：
     {
         'type': 'client_list',
         'created_at': '1412318244',
