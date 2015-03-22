@@ -19,7 +19,6 @@ cjyfffIMPlus是一个基于RabbitMQ的多人即时通讯程序，采用C\S模式
    
 ###3、依赖   
 客户端和服务器端均需要安装rabbitmq-server 3.2.4，另外服务器端需要安装redis-server 2:2.8.4-2，python版本均为2.7。    
-python依赖库已经使用virtualenv打包（基于ubuntu14.04），进入/client/IM_client_env/ （服务器是/server/IM_server_env），执行soure ./bin/activate即可进入运行环境。   
    
 客户端：   
 1. pika==0.9.13   
