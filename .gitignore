@@ -30,3 +30,6 @@ coverage.xml
 # Sphinx documentation
 docs/_build/
 
+# virtualenv file
+IM_env/
+
