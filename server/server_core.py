@@ -8,9 +8,29 @@ import settings
 import logging
 import sys
 import os
+import redis
 
 EXCHANGE_NAME = settings.exchange_name
-client_list = []
+
+redis_pool = redis.ConnectionPool(host=settings.REDIS_HOST,
+                                  port=settings.REDIS_PORT,
+                                  db=settings.REDIS_DB)
+rc = redis.Redis(connection_pool=redis_pool)
+rc_key = settings.REDIS_KEY
+
+
+class RedisJSONHandler(object):
+
+    @classmethod
+    def get(self, redis_conn, key):
+        res = redis_conn.get(key)
+        if not res:
+            return []
+        return json.loads(res)
+
+    @classmethod
+    def set(self, redis_conn, key, value):
+        return redis_conn.setex(key, json.dumps(value), settings.REDIS_EXPIRE)
 
 
 class BaseHandler(object):
@@ -24,10 +44,10 @@ class BaseHandler(object):
 class HandleOnlineMsg(BaseHandler):
 
     def run(self):
-        global client_list
+        client_list = RedisJSONHandler.get(rc, rc_key)
         user_id_list = []
-        for i in client_list:
-            user_id_list.append(i['user_id'])
+        for client in client_list:
+            user_id_list.append(client['user_id'])
 
         if self.msg['user_id'] not in user_id_list:
             client_list.append({
@@ -36,6 +56,7 @@ class HandleOnlineMsg(BaseHandler):
                     'user_id': self.msg['user_id'],
                     'prublic_key': self.msg['message']['prublic_key'],
             })
+            RedisJSONHandler.set(rc, rc_key, client_list)
 
         response_msg = {
                 'type': 'client_list',
@@ -56,10 +77,11 @@ class HandleOnlineMsg(BaseHandler):
 class HandleOfflineMsg(BaseHandler):
 
     def run(self):
-        global client_list
-        for i in client_list:
-            if i['user_id'] == self.msg['user_id']:
-                client_list.remove(i)
+        client_list = RedisJSONHandler.get(rc, rc_key)
+        for client in client_list:
+            if client['user_id'] == self.msg['user_id']:
+                client_list.remove(client)
+                RedisJSONHandler.set(rc, rc_key, client_list)
         self.ch.basic_ack(delivery_tag = self.method.delivery_tag)
 
         if not client_list:
@@ -83,7 +105,7 @@ class HandleOfflineMsg(BaseHandler):
 class HandleNormalMsg(BaseHandler):
 
     def run(self):
-        global client_list
+        client_list = RedisJSONHandler.get(rc, rc_key)
 
         d_client = {}
         for client in client_list:
