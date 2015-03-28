@@ -18,6 +18,7 @@ client_list = []
 
 
 class SendOnlineMsg(object):
+
     def __init__(self, connection, msg, pubkey):
         self.connection = connection
         self.msg = copy.deepcopy(msg)
@@ -38,6 +39,7 @@ class SendOnlineMsg(object):
 
 
 class SendNormalMsg(object):
+
     def __init__(self, msg, quit_msg):
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQServer))
         self.msg = copy.deepcopy(msg)
@@ -135,6 +137,7 @@ class SendNormalMsg(object):
 
 
 class ReceiveMsg(object):
+
     def __init__(self, msg, connection, online_msg, pubkey, privkey):
         self.client_list = None
         self.connection = connection
@@ -211,6 +214,7 @@ class MyThread(threading.Thread):
 
 
 class HandleError(object):
+
     @staticmethod
     def did_is_none():
         print "Please enter the id of the user you want to talk!"

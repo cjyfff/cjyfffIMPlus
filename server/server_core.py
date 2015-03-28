@@ -20,6 +20,7 @@ rc_key = settings.REDIS_KEY
 
 
 class RedisJSONHandler(object):
+
     @staticmethod
     def get(redis_conn, key):
         res = redis_conn.get(key)
@@ -31,8 +32,13 @@ class RedisJSONHandler(object):
     def set(redis_conn, key, value):
         return redis_conn.setex(key, json.dumps(value), settings.REDIS_EXPIRE)
 
+    @staticmethod
+    def purge(redis_conn, key):
+        redis_conn.delete(key)
+
 
 class BaseHandler(object):
+
     def __init__(self, msg, ch, method):
         self.msg = msg
         self.ch = ch
@@ -40,6 +46,7 @@ class BaseHandler(object):
 
 
 class HandleOnlineMsg(BaseHandler):
+
     def run(self):
         client_list = RedisJSONHandler.get(rc, rc_key)
         user_id_list = []
@@ -71,6 +78,7 @@ class HandleOnlineMsg(BaseHandler):
 
 
 class HandleOfflineMsg(BaseHandler):
+
     def run(self):
         client_list = RedisJSONHandler.get(rc, rc_key)
         for client in client_list:
@@ -98,6 +106,7 @@ class HandleOfflineMsg(BaseHandler):
 
 
 class HandleNormalMsg(BaseHandler):
+
     def run(self):
         client_list = RedisJSONHandler.get(rc, rc_key)
 
@@ -168,3 +177,4 @@ def main():
         sys.exit(1)
     finally:
         connection.close()
+        RedisJSONHandler.purge(rc, rc_key)
