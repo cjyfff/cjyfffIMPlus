@@ -29,7 +29,7 @@ class SendOnlineMsg(object):
     def run(self):
         online_msg = self.msg
         online_msg.update({'created_at': int(time.time()),
-                           'message': {'prublic_key': self.pubkey}})
+                           'message': {'public_key': self.pubkey}})
         online_msg = json.dumps(online_msg)
         self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
         self.channel.basic_publish(exchange=EXCHANGE_NAME,
@@ -86,7 +86,7 @@ class SendNormalMsg(object):
         global client_list
         for client in client_list:
             if client['id'] == did:
-                destination_pubkey = client['prublic_key']
+                destination_pubkey = client['public_key']
                 break
         encrypt_content = rsa.encrypt(content, rsa.PublicKey.load_pkcs1(destination_pubkey))
         return encrypt_content

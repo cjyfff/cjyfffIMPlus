@@ -54,7 +54,7 @@ class HandleOnlineMsg(BaseHandler):
                     'id': len(client_list) + 1,
                     'user_name': self.msg['from'],
                     'user_id': self.msg['user_id'],
-                    'prublic_key': self.msg['message']['prublic_key'],
+                    'public_key': self.msg['message']['public_key'],
             })
             RedisJSONHandler.set(rc, rc_key, client_list)
 
@@ -63,7 +63,7 @@ class HandleOnlineMsg(BaseHandler):
                 'created_at': int(time.time()),
                 'message': [{'id': client['id'],
                              'user_name': client['user_name'],
-                             'prublic_key': client['prublic_key']} for client in client_list],
+                             'public_key': client['public_key']} for client in client_list],
             }
         self.ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
         for client in client_list:
@@ -92,7 +92,7 @@ class HandleOfflineMsg(BaseHandler):
             'created_at': int(time.time()),
             'message': [{'id': client['id'],
                         'user_name': client['user_name'],
-                        'prublic_key': client['prublic_key']} for client in client_list],
+                        'public_key': client['public_key']} for client in client_list],
         }
         self.ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
         for client in client_list:
