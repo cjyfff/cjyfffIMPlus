@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-#coding=utf-8
+# coding=utf-8
 
 import pika
 import json
@@ -20,21 +20,19 @@ rc_key = settings.REDIS_KEY
 
 
 class RedisJSONHandler(object):
-
-    @classmethod
-    def get(self, redis_conn, key):
+    @staticmethod
+    def get(redis_conn, key):
         res = redis_conn.get(key)
         if not res:
             return []
         return json.loads(res)
 
-    @classmethod
-    def set(self, redis_conn, key, value):
+    @staticmethod
+    def set(redis_conn, key, value):
         return redis_conn.setex(key, json.dumps(value), settings.REDIS_EXPIRE)
 
 
 class BaseHandler(object):
-
     def __init__(self, msg, ch, method):
         self.msg = msg
         self.ch = ch
@@ -42,7 +40,6 @@ class BaseHandler(object):
 
 
 class HandleOnlineMsg(BaseHandler):
-
     def run(self):
         client_list = RedisJSONHandler.get(rc, rc_key)
         user_id_list = []
@@ -51,20 +48,19 @@ class HandleOnlineMsg(BaseHandler):
 
         if self.msg['user_id'] not in user_id_list:
             client_list.append({
-                    'id': len(client_list) + 1,
-                    'user_name': self.msg['from'],
-                    'user_id': self.msg['user_id'],
-                    'public_key': self.msg['message']['public_key'],
+                'id': len(client_list) + 1,
+                'user_name': self.msg['from'],
+                'user_id': self.msg['user_id'],
+                'public_key': self.msg['message']['public_key'],
             })
             RedisJSONHandler.set(rc, rc_key, client_list)
 
-        response_msg = {
-                'type': 'client_list',
-                'created_at': int(time.time()),
-                'message': [{'id': client['id'],
-                             'user_name': client['user_name'],
-                             'public_key': client['public_key']} for client in client_list],
-            }
+        response_msg = {'type': 'client_list',
+                        'created_at': int(time.time()),
+                        'message': [{'id': client['id'],
+                                     'user_name': client['user_name'],
+                                     'public_key': client['public_key']} for client in client_list],
+                        }
         self.ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
         for client in client_list:
             self.ch.basic_publish(exchange=EXCHANGE_NAME,
@@ -75,14 +71,13 @@ class HandleOnlineMsg(BaseHandler):
 
 
 class HandleOfflineMsg(BaseHandler):
-
     def run(self):
         client_list = RedisJSONHandler.get(rc, rc_key)
         for client in client_list:
             if client['user_id'] == self.msg['user_id']:
                 client_list.remove(client)
                 RedisJSONHandler.set(rc, rc_key, client_list)
-        self.ch.basic_ack(delivery_tag = self.method.delivery_tag)
+        self.ch.basic_ack(delivery_tag=self.method.delivery_tag)
 
         if not client_list:
             return
@@ -91,8 +86,8 @@ class HandleOfflineMsg(BaseHandler):
             'type': 'client_list',
             'created_at': int(time.time()),
             'message': [{'id': client['id'],
-                        'user_name': client['user_name'],
-                        'public_key': client['public_key']} for client in client_list],
+                         'user_name': client['user_name'],
+                         'public_key': client['public_key']} for client in client_list],
         }
         self.ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
         for client in client_list:
@@ -103,7 +98,6 @@ class HandleOfflineMsg(BaseHandler):
 
 
 class HandleNormalMsg(BaseHandler):
-
     def run(self):
         client_list = RedisJSONHandler.get(rc, rc_key)
 
@@ -151,11 +145,11 @@ def request(ch, method, properties, body):
 
 def main():
     logging.basicConfig(filename=os.path.join(os.getcwd(), 'cjyfffIM.log'),
-                        level=logging.WARN, filemode = 'a+',
+                        level=logging.WARN, filemode='a+',
                         format='%(asctime)s - %(levelname)s: %(message)s')
+    connection = pika.BlockingConnection(pika.ConnectionParameters(
+        host='localhost'))
     try:
-        connection = pika.BlockingConnection(pika.ConnectionParameters(
-                host='localhost'))
         channel = connection.channel()
         channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
         channel.queue_declare(queue='server_q', durable=True)
@@ -166,10 +160,11 @@ def main():
         channel.basic_consume(request, queue='server_q')
         channel.start_consuming()
     except KeyboardInterrupt:
-        connection.close()
         print " [*] Server exit..."
     except Exception, e:
         logging.error(e)
         print "\033[0;31;1m%s\033[0m" % (
-                  "An error had happened and the server is down: " + str(e))
+            "An error had happened and the server is down: " + str(e))
         sys.exit(1)
+    finally:
+        connection.close()

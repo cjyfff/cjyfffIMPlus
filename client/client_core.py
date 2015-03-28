@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-#coding=utf-8
+# coding=utf-8
 
 import pika
 import os
@@ -18,7 +18,6 @@ client_list = []
 
 
 class SendOnlineMsg(object):
-
     def __init__(self, connection, msg, pubkey):
         self.connection = connection
         self.msg = copy.deepcopy(msg)
@@ -39,7 +38,6 @@ class SendOnlineMsg(object):
 
 
 class SendNormalMsg(object):
-
     def __init__(self, msg, quit_msg):
         self.connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQServer))
         self.msg = copy.deepcopy(msg)
@@ -66,13 +64,15 @@ class SendNormalMsg(object):
                                    properties=pika.BasicProperties(delivery_mode=2))
         self.connection.close()
 
-    def print_client_list(self):
+    @staticmethod
+    def print_client_list():
         global client_list
         # TODO: exclude client itself
         for client in client_list:
             print "id: %s    name: %s" % (client['id'], client['user_name'])
 
-    def check_did(self, did):
+    @staticmethod
+    def check_did(did):
         global client_list
         if not did:
             HandleError.did_is_none()
@@ -82,12 +82,16 @@ class SendNormalMsg(object):
             return False
         return True
 
-    def encrypt_msg(self, did, content):
+    @staticmethod
+    def encrypt_msg(did, content):
         global client_list
+        destination_pubkey = ''
         for client in client_list:
             if client['id'] == did:
                 destination_pubkey = client['public_key']
                 break
+        if not destination_pubkey:
+            return
         encrypt_content = rsa.encrypt(content, rsa.PublicKey.load_pkcs1(destination_pubkey))
         return encrypt_content
 
@@ -131,7 +135,6 @@ class SendNormalMsg(object):
 
 
 class ReceiveMsg(object):
-
     def __init__(self, msg, connection, online_msg, pubkey, privkey):
         self.client_list = None
         self.connection = connection
@@ -195,7 +198,7 @@ class ReceiveMsg(object):
 
 
 class MyThread(threading.Thread):
-    '''Factory of new threads'''
+    """Factory of new threads"""
 
     def __init__(self, func, args, name=''):
         threading.Thread.__init__(self)
@@ -208,17 +211,16 @@ class MyThread(threading.Thread):
 
 
 class HandleError(object):
-
-    @classmethod
-    def did_is_none(self):
+    @staticmethod
+    def did_is_none():
         print "Please enter the id of the user you want to talk!"
 
-    @classmethod
-    def did_is_invalid(self):
+    @staticmethod
+    def did_is_invalid():
         print "This user id is not valid, please enter an valid one!"
 
-    @classmethod
-    def decryption_error(self):
+    @staticmethod
+    def decryption_error():
         print "Decryption error, please connect again."
 
 
