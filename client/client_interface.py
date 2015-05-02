@@ -16,6 +16,9 @@ usage = '''
 
 
 class NormalInterface(object):
+    """
+    普通CLI交互接口
+    """
     @staticmethod
     def n_show_usage():
         print usage
@@ -24,8 +27,40 @@ class NormalInterface(object):
     def n_sys_exit():
         print "Bye!"
 
+    @staticmethod
+    def n_show_client_list(id, name):
+        print "id: {id}    name: {name}".format(id=id, name=name)
+
+    @staticmethod
+    def n_input_char():
+        char = raw_input("> ")
+        return char
+
+    @staticmethod
+    def n_client_list_changed_warning():
+        print "Warning! client list has changed, enter 'cl' or 'client_list' to confirm."
+
+    @staticmethod
+    def n_show_msg(msg_from, msg):
+        print "from {msg_from}: {msg}".format(msg_from=msg_from, msg=msg)
+
+    @staticmethod
+    def n_did_is_none():
+        print "Please enter the id of the user you want to talk!"
+
+    @staticmethod
+    def n_did_is_invalid():
+        print "This user id is not valid, please enter an valid one!"
+
+    @staticmethod
+    def decryption_error():
+        print "Decryption error, please connect again."
+
 
 class UnixSocketInterface(object):
+    """
+    unix socket 交互接口
+    """
     pass
 
 
@@ -41,5 +76,5 @@ class ClientInterface(NormalInterface, UnixSocketInterface):
         elif interface_type == 'unix_socket':
             fun_name = 'u_' + item
         else:
-            raise TypeError('Unknown interface type: %s' % interface_type)
+            raise TypeError('Unknown interface type: {0}'.format(interface_type))
         return super(ClientInterface, self).__getattribute__(fun_name)

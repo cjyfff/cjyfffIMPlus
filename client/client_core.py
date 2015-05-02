@@ -48,6 +48,8 @@ class SendNormalMsg(object):
         self.quit_msg = copy.deepcopy(quit_msg)
         self.user_id = self.msg['user_id']
         self.channel = self.connection.channel()
+        self.show_ci = ClientInterface()
+        self.in_ci = ClientInterface()
         self.did = 0
 
     def send_quit_msg(self):
@@ -68,21 +70,19 @@ class SendNormalMsg(object):
                                    properties=pika.BasicProperties(delivery_mode=2))
         self.connection.close()
 
-    @staticmethod
-    def print_client_list():
+    def show_client_list(self):
         global client_list
         # TODO: exclude client itself
         for client in client_list:
-            print "id: %s    name: %s" % (client['id'], client['user_name'])
+            self.show_ci.show_client_list(client['id'], client['user_name'])
 
-    @staticmethod
-    def check_did(did):
+    def check_did(self, did):
         global client_list
         if not did:
-            HandleError.did_is_none()
+            self.show_ci.did_is_none()
             return False
         if did not in [i['id'] for i in client_list]:
-            HandleError.did_is_invalid()
+            self.show_ci.did_is_invalid()
             return False
         return True
 
@@ -101,7 +101,7 @@ class SendNormalMsg(object):
 
     def run(self):
         while 1:
-            msg = raw_input("> ")
+            msg = self.in_ci.input_char()
             if not msg:
                 continue
             if msg in ['quit', 'exit']:
@@ -109,7 +109,7 @@ class SendNormalMsg(object):
                 time.sleep(1)
                 break
             if msg in ['client_list', 'cl']:
-                self.print_client_list()
+                self.show_client_list()
                 continue
 
             try:
@@ -153,16 +153,17 @@ class ReceiveMsg(object):
         self.channel.queue_bind(exchange=EXCHANGE_NAME,
                                 queue=queue_name,
                                 routing_key=self.user_id)
+        self.ci = ClientInterface()
 
-        # In order to handeling online respone from server while
+        # In order to handling online response from server while
         # sending online msg, the function of sending online msg must be run
-        # as the same time as runing receiving msg function.
+        # as the same time as running receiving msg function.
         send_online_msg = SendOnlineMsg(connection, online_msg, pubkey)
         send_online_msg.run()
 
     def notify_client_list_has_changed(self, body):
         if self.client_list is not None and body['message'] != self.client_list:
-            print "Warning! client list has changed, enter 'cl' or 'client_list' to confirm."
+            self.ci.client_list_changed_warning()
         self.client_list = body['message']
 
     def save_client_list(self, body):
@@ -175,7 +176,7 @@ class ReceiveMsg(object):
         try:
             return rsa.decrypt(content, self.privkey)
         except rsa.DecryptionError:
-            HandleError.decryption_error()
+            self.ci.decryption_error()
             return False
 
     def on_response(self, body):
@@ -186,7 +187,7 @@ class ReceiveMsg(object):
         else:
             msg = self.decrypt_msg(body['message'].encode('latin-1'))
             if msg:
-                print "from %s: %s" % (body['from'], msg)
+                self.ci.show_msg(body['from'], msg)
             else:
                 pass
 
@@ -213,21 +214,6 @@ class MyThread(threading.Thread):
 
     def run(self):
         apply(self.func, self.args)
-
-
-class HandleError(object):
-
-    @staticmethod
-    def did_is_none():
-        print "Please enter the id of the user you want to talk!"
-
-    @staticmethod
-    def did_is_invalid():
-        print "This user id is not valid, please enter an valid one!"
-
-    @staticmethod
-    def decryption_error():
-        print "Decryption error, please connect again."
 
 
 def main():
