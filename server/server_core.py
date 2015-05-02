@@ -172,8 +172,8 @@ def main():
         print " [*] Server exit..."
     except Exception, e:
         logging.error(e)
-        print "\033[0;31;1m%s\033[0m" % (
-            "An error had happened and the server is down: " + str(e))
+        print "\033[0;31;1m{error}\033[0m".format(error="An error had happened and the server is down: "
+                                                        + str(e))
         sys.exit(1)
     finally:
         connection.close()
