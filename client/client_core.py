@@ -10,6 +10,8 @@ import copy
 import rsa
 import settings
 from uuid import uuid4
+from client_interface import ClientInterface
+
 
 EXCHANGE_NAME = settings.EXCHANGE_NAME
 MQServer = settings.MQServer
