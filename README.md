@@ -39,10 +39,10 @@ cjyfffIMPlus是一个基于RabbitMQ的多人即时通讯程序，采用C\S模式
 ###5、使用方法：   
    
 服务器端：   
-运行server_core.py   
+运行IM_server.py   
    
 客户端：   
-运行client_interface.py   
+运行IM_client.py   
 输入'client_list'或者'cl'查看当前在线的用户   
 输入用户对应的id + 空格 + 想要发送的消息，即可向该id对应的用户发送消息   
 例如输入'1 hello'，将会向id为1的用户发送消息"hello"   
