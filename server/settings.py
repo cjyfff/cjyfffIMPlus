@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # coding=utf-8
-exchange_name = 'CJYFFFIM'
+EXCHANGE_NAME = 'CJYFFFIM'
 
 REDIS_HOST = 'localhost'
 REDIS_PORT = 6379

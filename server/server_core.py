@@ -10,7 +10,7 @@ import sys
 import os
 import redis
 
-EXCHANGE_NAME = settings.exchange_name
+EXCHANGE_NAME = settings.EXCHANGE_NAME
 
 redis_pool = redis.ConnectionPool(host=settings.REDIS_HOST,
                                   port=settings.REDIS_PORT,

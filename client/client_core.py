@@ -11,8 +11,8 @@ import rsa
 import settings
 from uuid import uuid4
 
-EXCHANGE_NAME = settings.exchange_name
-MQServer = settings.mq_server
+EXCHANGE_NAME = settings.EXCHANGE_NAME
+MQServer = settings.MQServer
 
 client_list = []
 
