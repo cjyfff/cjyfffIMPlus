@@ -19,22 +19,30 @@ rc = redis.Redis(connection_pool=redis_pool)
 rc_key = settings.REDIS_KEY
 
 
-class RedisJSONHandler(object):
+class RDClientList(object):
+    """
+    Descriptor for control client_list in redis
+    """
 
-    @staticmethod
-    def get(redis_conn, key):
-        res = redis_conn.get(key)
-        if not res:
+    def __init__(self, key, redis_conn, redis_expire):
+        self.redis_conn = redis_conn
+        self.key = key
+        self.redis_expire = redis_expire
+
+    @property
+    def client_list(self):
+        client_list = self.redis_conn.get(self.key)
+        if not client_list:
             return []
-        return json.loads(res)
+        return json.loads(client_list)
 
-    @staticmethod
-    def set(redis_conn, key, value):
-        return redis_conn.setex(key, json.dumps(value), settings.REDIS_EXPIRE)
+    @client_list.setter
+    def client_list(self, value):
+        self.redis_conn.setex(self.key, json.dumps(value), self.redis_expire)
 
-    @staticmethod
-    def purge(redis_conn, key):
-        redis_conn.delete(key)
+    @client_list.deleter
+    def client_list(self):
+        self.redis_conn.delete(self.key)
 
 
 class BaseHandler(object):
@@ -43,12 +51,15 @@ class BaseHandler(object):
         self.msg = msg
         self.ch = ch
         self.method = method
+        self.rd_client_list = RDClientList(key=settings.REDIS_KEY,
+                                           redis_conn=rc,
+                                           redis_expire=settings.REDIS_EXPIRE)
 
 
 class HandleOnlineMsg(BaseHandler):
 
     def run(self):
-        client_list = RedisJSONHandler.get(rc, rc_key)
+        client_list = self.rd_client_list.client_list
         user_id_list = []
         for client in client_list:
             user_id_list.append(client['user_id'])
@@ -60,7 +71,7 @@ class HandleOnlineMsg(BaseHandler):
                 'user_id': self.msg['user_id'],
                 'public_key': self.msg['message']['public_key'],
             })
-            RedisJSONHandler.set(rc, rc_key, client_list)
+            self.rd_client_list.client_list = client_list
 
         response_msg = {'type': 'client_list',
                         'created_at': int(time.time()),
@@ -80,11 +91,11 @@ class HandleOnlineMsg(BaseHandler):
 class HandleOfflineMsg(BaseHandler):
 
     def run(self):
-        client_list = RedisJSONHandler.get(rc, rc_key)
+        client_list = self.rd_client_list.client_list
         for client in client_list:
             if client['user_id'] == self.msg['user_id']:
                 client_list.remove(client)
-                RedisJSONHandler.set(rc, rc_key, client_list)
+                self.rd_client_list.client_list = client_list
         self.ch.basic_ack(delivery_tag=self.method.delivery_tag)
 
         if not client_list:
@@ -108,7 +119,7 @@ class HandleOfflineMsg(BaseHandler):
 class HandleNormalMsg(BaseHandler):
 
     def run(self):
-        client_list = RedisJSONHandler.get(rc, rc_key)
+        client_list = self.rd_client_list.client_list
 
         d_client = {}
         for client in client_list:
@@ -177,4 +188,7 @@ def main():
         sys.exit(1)
     finally:
         connection.close()
-        RedisJSONHandler.purge(rc, rc_key)
+        rd_client_list = RDClientList(key=settings.REDIS_KEY,
+                                      redis_conn=rc,
+                                      redis_expire=settings.REDIS_EXPIRE)
+        del rd_client_list.client_list
