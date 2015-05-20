@@ -88,6 +88,8 @@ class SendNormalMsg(object):
 
     @staticmethod
     def encrypt_msg(did, content):
+        assert isinstance(did, int)
+
         global client_list
         destination_pubkey = ''
         for client in client_list:
