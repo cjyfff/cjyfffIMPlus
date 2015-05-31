@@ -16,7 +16,26 @@ from client_interface import ClientInterface
 EXCHANGE_NAME = settings.EXCHANGE_NAME
 MQServer = settings.MQServer
 
-client_list = []
+
+class Singleton(object):
+    objs = {}
+    lock = threading.Lock()
+
+    def __new__(cls, *args, **kwargs):
+        if cls in cls.objs:
+            return cls.objs[cls]
+        cls.lock.acquire()
+        try:
+            if cls in cls.objs:
+                return cls.objs[cls]
+            cls.objs[cls] = object.__new__(cls)
+        finally:
+            cls.lock.release()
+        return cls.objs[cls]
+
+
+class ClientList(Singleton):
+    client_list = []
 
 
 class SendOnlineMsg(object):
@@ -71,17 +90,15 @@ class SendNormalMsg(object):
         self.connection.close()
 
     def show_client_list(self):
-        global client_list
         # TODO: exclude client itself
-        for client in client_list:
+        for client in ClientList().client_list:
             self.show_ci.show_client_list(client['id'], client['user_name'])
 
     def check_did(self, did):
-        global client_list
         if not did:
             self.show_ci.did_is_none()
             return False
-        if did not in [i['id'] for i in client_list]:
+        if did not in [i['id'] for i in ClientList().client_list]:
             self.show_ci.did_is_invalid()
             return False
         return True
@@ -90,9 +107,8 @@ class SendNormalMsg(object):
     def encrypt_msg(did, content):
         assert isinstance(did, int)
 
-        global client_list
         destination_pubkey = ''
-        for client in client_list:
+        for client in ClientList().client_list:
             if client['id'] == did:
                 destination_pubkey = client['public_key']
                 break
@@ -169,10 +185,9 @@ class ReceiveMsg(object):
         self.client_list = body['message']
 
     def save_client_list(self, body):
-        global client_list
         self.notify_client_list_has_changed(body)
         # TODO: exclude client itself
-        client_list = body['message']
+        ClientList().client_list = body['message']
 
     def decrypt_msg(self, content):
         try:
