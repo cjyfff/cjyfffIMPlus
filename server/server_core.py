@@ -12,11 +12,11 @@ import redis
 
 EXCHANGE_NAME = settings.EXCHANGE_NAME
 
-redis_pool = redis.ConnectionPool(host=settings.REDIS_HOST,
+REDIS_POOL = redis.ConnectionPool(host=settings.REDIS_HOST,
                                   port=settings.REDIS_PORT,
                                   db=settings.REDIS_DB)
-rc = redis.Redis(connection_pool=redis_pool)
-rc_key = settings.REDIS_KEY
+RC = redis.Redis(connection_pool=REDIS_POOL)
+RC_KEY = settings.REDIS_KEY
 
 
 class RDClientList(object):
@@ -51,8 +51,8 @@ class BaseHandler(object):
         self.msg = msg
         self.ch = ch
         self.method = method
-        self.rd_client_list = RDClientList(key=settings.REDIS_KEY,
-                                           redis_conn=rc,
+        self.rd_client_list = RDClientList(key=RC_KEY,
+                                           redis_conn=RC,
                                            redis_expire=settings.REDIS_EXPIRE)
 
 
@@ -188,7 +188,7 @@ def main():
         sys.exit(1)
     finally:
         connection.close()
-        rd_client_list = RDClientList(key=settings.REDIS_KEY,
-                                      redis_conn=rc,
+        rd_client_list = RDClientList(key=RC_KEY,
+                                      redis_conn=RC,
                                       redis_expire=settings.REDIS_EXPIRE)
         del rd_client_list.client_list
