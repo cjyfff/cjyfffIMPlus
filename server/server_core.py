@@ -9,14 +9,32 @@ import logging
 import sys
 import os
 import redis
+import threading
 
-EXCHANGE_NAME = settings.EXCHANGE_NAME
 
-REDIS_POOL = redis.ConnectionPool(host=settings.REDIS_HOST,
-                                  port=settings.REDIS_PORT,
-                                  db=settings.REDIS_DB)
-RC = redis.Redis(connection_pool=REDIS_POOL)
-RC_KEY = settings.REDIS_KEY
+class Singleton(object):
+    objs = {}
+    lock = threading.Lock()
+
+    def __new__(cls, *args, **kwargs):
+        if cls in cls.objs:
+            return cls.objs[cls]
+        cls.lock.acquire()
+        try:
+            if cls in cls.objs:
+                return cls.objs[cls]
+            cls.objs[cls] = object.__new__(cls)
+        finally:
+            cls.lock.release()
+        return cls.objs[cls]
+
+
+class RedisClient(Singleton):
+    def __init__(self):
+        redis_pool = redis.ConnectionPool(host=settings.REDIS_HOST,
+                                          port=settings.REDIS_PORT,
+                                          db=settings.REDIS_DB)
+        self.rc = redis.Redis(connection_pool=redis_pool)
 
 
 class RDClientList(object):
@@ -51,8 +69,8 @@ class BaseHandler(object):
         self.msg = msg
         self.ch = ch
         self.method = method
-        self.rd_client_list = RDClientList(key=RC_KEY,
-                                           redis_conn=RC,
+        self.rd_client_list = RDClientList(key=settings.REDIS_KEY,
+                                           redis_conn=RedisClient().rc,
                                            redis_expire=settings.REDIS_EXPIRE)
 
 
@@ -79,9 +97,9 @@ class HandleOnlineMsg(BaseHandler):
                                      'user_name': client['user_name'],
                                      'public_key': client['public_key']} for client in client_list],
                         }
-        self.ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
+        self.ch.exchange_declare(exchange=settings.EXCHANGE_NAME, type='direct')
         for client in client_list:
-            self.ch.basic_publish(exchange=EXCHANGE_NAME,
+            self.ch.basic_publish(exchange=settings.EXCHANGE_NAME,
                                   routing_key=client['user_id'],
                                   body=json.dumps(response_msg),
                                   properties=pika.BasicProperties(delivery_mode=2))
@@ -108,9 +126,9 @@ class HandleOfflineMsg(BaseHandler):
                          'user_name': client['user_name'],
                          'public_key': client['public_key']} for client in client_list],
         }
-        self.ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
+        self.ch.exchange_declare(exchange=settings.EXCHANGE_NAME, type='direct')
         for client in client_list:
-            self.ch.basic_publish(exchange=EXCHANGE_NAME,
+            self.ch.basic_publish(exchange=settings.EXCHANGE_NAME,
                                   routing_key=client['user_id'],
                                   body=json.dumps(response_msg),
                                   properties=pika.BasicProperties(delivery_mode=2))
@@ -139,8 +157,8 @@ class HandleNormalMsg(BaseHandler):
             'message': self.msg['message'],
         }
 
-        self.ch.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
-        self.ch.basic_publish(exchange=EXCHANGE_NAME,
+        self.ch.exchange_declare(exchange=settings.EXCHANGE_NAME, type='direct')
+        self.ch.basic_publish(exchange=settings.EXCHANGE_NAME,
                               routing_key=d_user_id,
                               body=json.dumps(response_msg),
                               properties=pika.BasicProperties(delivery_mode=2))
@@ -171,9 +189,9 @@ def main():
         host='localhost'))
     try:
         channel = connection.channel()
-        channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
+        channel.exchange_declare(exchange=settings.EXCHANGE_NAME, type='direct')
         channel.queue_declare(queue='server_q', durable=True)
-        channel.queue_bind(exchange=EXCHANGE_NAME, queue='server_q', routing_key='server')
+        channel.queue_bind(exchange=settings.EXCHANGE_NAME, queue='server_q', routing_key='server')
         print " [*] Server running..."
 
         channel.basic_qos(prefetch_count=1)
@@ -188,7 +206,7 @@ def main():
         sys.exit(1)
     finally:
         connection.close()
-        rd_client_list = RDClientList(key=RC_KEY,
-                                      redis_conn=RC,
+        rd_client_list = RDClientList(key=settings.REDIS_KEY,
+                                      redis_conn=RedisClient().rc,
                                       redis_expire=settings.REDIS_EXPIRE)
         del rd_client_list.client_list
