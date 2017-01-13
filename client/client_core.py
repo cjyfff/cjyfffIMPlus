@@ -61,8 +61,8 @@ class SendOnlineMsg(object):
 
 class SendNormalMsg(object):
 
-    def __init__(self, msg, quit_msg):
-        self.connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQServer))
+    def __init__(self, msg, connection, quit_msg):
+        self.connection = connection
         self.msg = copy.deepcopy(msg)
         self.quit_msg = copy.deepcopy(quit_msg)
         self.user_id = self.msg['user_id']
@@ -266,14 +266,15 @@ def main():
     (pubkey, privkey) = rsa.newkeys(1024)
     pubkey = pubkey.save_pkcs1()
 
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQServer))
-    send_normal_msg = SendNormalMsg(normal_msg, quit_msg)
-    recive_msg = ReceiveMsg(normal_msg, connection, online_msg, pubkey, privkey)
+    send_connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQServer))
+    receive_connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQServer))
+    send_normal_msg = SendNormalMsg(normal_msg, send_connection, quit_msg)
+    receive_msg = ReceiveMsg(normal_msg, receive_connection, online_msg, pubkey, privkey)
 
     threads = []
     t1 = MyThread(send_normal_msg.run, (), )
     threads.append(t1)
-    t2 = MyThread(recive_msg.run, (), )
+    t2 = MyThread(receive_msg.run, (), )
     threads.append(t2)
 
     for t in threads:
