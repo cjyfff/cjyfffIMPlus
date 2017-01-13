@@ -186,7 +186,7 @@ def main():
                         level=logging.WARN, filemode='a+',
                         format='%(asctime)s - %(levelname)s: %(message)s')
     connection = pika.BlockingConnection(pika.ConnectionParameters(
-        host='localhost'))
+        host=settings.MQServer))
     try:
         channel = connection.channel()
         channel.exchange_declare(exchange=settings.EXCHANGE_NAME, type='direct')

@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 # coding=utf-8
 EXCHANGE_NAME = 'CJYFFFIM'
+MQServer = 'localhost'
 
 REDIS_HOST = 'localhost'
 REDIS_PORT = 6379
