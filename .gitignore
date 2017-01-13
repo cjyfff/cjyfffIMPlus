@@ -36,3 +36,6 @@ IM_env/
 # PyCharm settings
 .idea/
 
+# IM settings file
+settings.py
+

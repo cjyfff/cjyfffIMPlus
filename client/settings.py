@@ -1,9 +1,0 @@
-#! /usr/bin/env python
-# coding=utf-8
-
-EXCHANGE_NAME = 'CJYFFFIM'
-MQServer = '192.168.2.9'
-
-# 当INTERFACE_TYPE的值为`normal`时，将会选择使用默认的命令行交互；
-# 当INTERFACE_TYPE的值为其他值时（例如`unix_socket`），将会使用其他的交互方式。
-INTERFACE_TYPE = 'normal'
