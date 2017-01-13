@@ -2,10 +2,8 @@
 # coding=utf-8
 import settings
 
-interface_type = settings.INTERFACE_TYPE
 
-
-usage = '''
+USAGE = '''
 [cjyfffIMPlus client v0.84]
 输入'client_list'或者'cl'查看当前在线的用户
 输入用户对应的id + 空格 + 想要发送的消息，即可向该id对应的用户发送消息
@@ -21,7 +19,7 @@ class NormalInterface(object):
     """
     @staticmethod
     def n_show_usage():
-        print usage
+        print USAGE
 
     @staticmethod
     def n_sys_exit():
@@ -71,10 +69,10 @@ class ClientInterface(NormalInterface, UnixSocketInterface):
     当INTERFACE_TYPE的值为其他值时（例如`unix_socket`），将会使用其他的交互方式。
     """
     def __getattribute__(self, item):
-        if interface_type == 'normal':
+        if settings.INTERFACE_TYPE == 'normal':
             fun_name = 'n_' + item
-        elif interface_type == 'unix_socket':
+        elif settings.INTERFACE_TYPE == 'unix_socket':
             fun_name = 'u_' + item
         else:
-            raise TypeError('Unknown interface type: {0}'.format(interface_type))
+            raise TypeError('Unknown interface type: {0}'.format(settings.INTERFACE_TYPE))
         return super(ClientInterface, self).__getattribute__(fun_name)

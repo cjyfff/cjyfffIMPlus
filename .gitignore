@@ -33,6 +33,6 @@ docs/_build/
 # virtualenv file
 IM_env/
 
-# pycharm file
+# PyCharm settings
 .idea/
 

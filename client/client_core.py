@@ -13,10 +13,6 @@ from uuid import uuid4
 from client_interface import ClientInterface
 
 
-EXCHANGE_NAME = settings.EXCHANGE_NAME
-MQServer = settings.MQServer
-
-
 class Singleton(object):
     objs = {}
     lock = threading.Lock()
@@ -52,8 +48,8 @@ class SendOnlineMsg(object):
         online_msg.update({'created_at': int(time.time()),
                            'message': {'public_key': self.pubkey}})
         online_msg = json.dumps(online_msg)
-        self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
-        self.channel.basic_publish(exchange=EXCHANGE_NAME,
+        self.channel.exchange_declare(exchange=settings.EXCHANGE_NAME, type='direct')
+        self.channel.basic_publish(exchange=settings.EXCHANGE_NAME,
                                    routing_key='server',
                                    body=online_msg,
                                    properties=pika.BasicProperties(delivery_mode=2))
@@ -74,16 +70,16 @@ class SendNormalMsg(object):
     def send_quit_msg(self):
         # send quit msg to server
         self.quit_msg.update({'created_at': int(time.time())})
-        self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
-        self.channel.basic_publish(exchange=EXCHANGE_NAME,
+        self.channel.exchange_declare(exchange=settings.EXCHANGE_NAME, type='direct')
+        self.channel.basic_publish(exchange=settings.EXCHANGE_NAME,
                                    routing_key='server',
                                    body=json.dumps(self.quit_msg),
                                    properties=pika.BasicProperties(delivery_mode=2))
 
         # send quit msg to client itself
         self.quit_msg.update({'type': 'self_offline'})
-        self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
-        self.channel.basic_publish(exchange=EXCHANGE_NAME,
+        self.channel.exchange_declare(exchange=settings.EXCHANGE_NAME, type='direct')
+        self.channel.basic_publish(exchange=settings.EXCHANGE_NAME,
                                    routing_key=self.user_id,
                                    body=json.dumps(self.quit_msg),
                                    properties=pika.BasicProperties(delivery_mode=2))
@@ -149,8 +145,8 @@ class SendNormalMsg(object):
                 'message': msg_content.decode('latin-1'),
             })
             normal_msg = json.dumps(normal_msg, ensure_ascii=False)
-            self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
-            self.channel.basic_publish(exchange=EXCHANGE_NAME,
+            self.channel.exchange_declare(exchange=settings.EXCHANGE_NAME, type='direct')
+            self.channel.basic_publish(exchange=settings.EXCHANGE_NAME,
                                        routing_key='server',
                                        body=normal_msg,
                                        properties=pika.BasicProperties(delivery_mode=2))
@@ -165,10 +161,10 @@ class ReceiveMsg(object):
         self.user_id = self.msg['user_id']
         self.channel = self.connection.channel()
         self.privkey = privkey
-        self.channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
+        self.channel.exchange_declare(exchange=settings.EXCHANGE_NAME, type='direct')
         queue_name = 'user_q' + self.user_id
         self.channel.queue_declare(queue=queue_name, durable=True)
-        self.channel.queue_bind(exchange=EXCHANGE_NAME,
+        self.channel.queue_bind(exchange=settings.EXCHANGE_NAME,
                                 queue=queue_name,
                                 routing_key=self.user_id)
         self.ci = ClientInterface()
@@ -266,8 +262,8 @@ def main():
     (pubkey, privkey) = rsa.newkeys(1024)
     pubkey = pubkey.save_pkcs1()
 
-    send_connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQServer))
-    receive_connection = pika.BlockingConnection(pika.ConnectionParameters(host=MQServer))
+    send_connection = pika.BlockingConnection(pika.ConnectionParameters(host=settings.MQServer))
+    receive_connection = pika.BlockingConnection(pika.ConnectionParameters(host=settings.MQServer))
     send_normal_msg = SendNormalMsg(normal_msg, send_connection, quit_msg)
     receive_msg = ReceiveMsg(normal_msg, receive_connection, online_msg, pubkey, privkey)
 
